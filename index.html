@@ -628,6 +628,49 @@
       display: none;
     }
 
+    .history-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .history-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-teams {
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+    .history-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .history-score-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .history-scores-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .history-pill {
+      background: #1e293b;
+      border: 1px solid #475569;
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
     .rally-result-banner {
       background: #0f172a;
       border: 1px solid #334155;
@@ -790,7 +833,8 @@
       #endGameModal,
       #switchEndsModal,
       #matchOverModal,
-      #settingsModal {
+      #settingsModal,
+      #historyModal {
         display: none !important;
       }
 
@@ -916,6 +960,7 @@
     </div>
     <div class="nav-actions">
       <button class="btn-sm" onclick="openWarmupModal()">⏳ Warm-Up</button>
+      <button class="btn-sm" onclick="openMatchHistoryModal()">📜 History</button>
       <button class="btn-sm" onclick="openModal('summaryModal')">📊 Summary & Export</button>
       <button class="btn-sm" onclick="openModal('settingsModal')">⚙️ Match Settings</button>
     </div>
@@ -1072,6 +1117,30 @@
       </thead>
       <tbody id="boxScoreTbody"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- MODAL: MATCH HISTORY ARCHIVE -->
+<div class="modal-overlay" id="historyModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">📜 Match History & Archives (On Device)</div>
+      <button class="close-btn" onclick="closeModal('historyModal')">✕</button>
+    </div>
+    <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px;">
+      Matches completed on this device are automatically saved here. Re-open any match report for analysis, CSV export, or PDF printing.
+    </div>
+
+    <div id="historyListContainer" style="max-height:380px; overflow-y:auto; margin-bottom:14px;"></div>
+
+    <div style="display:flex; justify-content:space-between; gap:8px;">
+      <button class="btn-sm" style="background:var(--accent-rose); color:#fff; border:none; padding:8px 12px;" onclick="clearAllArchivedMatches()">
+        🗑️ Clear All History
+      </button>
+      <button class="btn-sm" style="padding:8px 14px;" onclick="closeModal('historyModal')">
+        Close
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1296,7 +1365,7 @@
     </div>
 
     <div class="modal-header">
-      <div class="modal-title">📊 Match Report, Analytics & Point Log</div>
+      <div class="modal-title" id="summaryModalTitle">📊 Match Report, Analytics & Point Log</div>
       <button class="close-btn" onclick="closeModal('summaryModal')">✕</button>
     </div>
 
@@ -1522,6 +1591,7 @@ let undoStack = [];
 let redoStack = [];
 let pendingRallyOutcome = null;
 let liveBoxScope = "MATCH";
+let activeArchiveInspection = null;
 
 let breakIntervalId = null;
 let warmupIntervalId = null;
@@ -1589,6 +1659,15 @@ function initNewGame(gameNum, firstServingTeam, team1OnLeft = true) {
     initC2 = activeGame.challenges.team2;
   }
 
+  // Respect starting parity for handicaps
+  const t1Right = (matchSeries.handicap1 % 2 === 0) ? matchSeries.players.p1 : (isSingles ? matchSeries.players.p1 : matchSeries.players.p2);
+  const t1Left = isSingles ? matchSeries.players.p1 : ((matchSeries.handicap1 % 2 === 0) ? matchSeries.players.p2 : matchSeries.players.p1);
+
+  const t2Right = (matchSeries.handicap2 % 2 === 0) ? matchSeries.players.p3 : (isSingles ? matchSeries.players.p3 : matchSeries.players.p4);
+  const t2Left = isSingles ? matchSeries.players.p3 : ((matchSeries.handicap2 % 2 === 0) ? matchSeries.players.p4 : matchSeries.players.p3);
+
+  const initialServer = (firstServingTeam === 1) ? t1Right : t2Right;
+
   return {
     gameNumber: gameNum,
     score1: matchSeries.handicap1,
@@ -1597,21 +1676,16 @@ function initNewGame(gameNum, firstServingTeam, team1OnLeft = true) {
     serverNumber: 2,
     team1OnLeft: team1OnLeft,
     isFinished: false,
+    savedToHistory: false,
     challenges: {
       team1: initC1,
       team2: initC2
     },
     positions: {
-      team1: {
-        right: matchSeries.players.p1,
-        left: isSingles ? matchSeries.players.p1 : matchSeries.players.p2
-      },
-      team2: {
-        right: matchSeries.players.p3,
-        left: isSingles ? matchSeries.players.p3 : matchSeries.players.p4
-      }
+      team1: { right: t1Right, left: t1Left },
+      team2: { right: t2Right, left: t2Left }
     },
-    activeServerName: (firstServingTeam === 1) ? matchSeries.players.p1 : matchSeries.players.p3,
+    activeServerName: initialServer,
     rallies: [],
     boxScore: createCleanBoxScore()
   };
@@ -1678,6 +1752,7 @@ function handleFullMatchReset() {
   closeModal("summaryModal");
   closeModal("warmupModal");
   closeModal("challengeModal");
+  closeModal("historyModal");
 
   startMatch();
   playBeep(450, 0.15);
@@ -1710,7 +1785,7 @@ function pauseMatchTimer() {
 function renderTimerDisplay() {
   const m = String(Math.floor(matchTimerSeconds / 60)).padStart(2, "0");
   const s = String(matchTimerSeconds % 60).padStart(2, "0");
-  document.getElementById("matchStopwatch").innerText = `⏱️ ${m}:${s}`;
+  document.getElementById("matchStopwatch").innerText = `⏱️️ ${m}:${s}`;
 }
 
 function updateTimerButtonUI() {
@@ -1761,6 +1836,136 @@ function renderWarmupDisplay() {
   const s = String(warmupSeconds % 60).padStart(2, "0");
   document.getElementById("warmupTimerDisplay").innerText = `${m}:${s}`;
 }
+
+/* =========================================================
+   LOCAL STORAGE MATCH ARCHIVES
+   ========================================================= */
+
+function getStoredHistory() {
+  try {
+    return JSON.parse(localStorage.getItem("picklepoint_match_history") || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveMatchToLocalStorage() {
+  if (activeGame && activeGame.savedToHistory) return;
+
+  const t1Wins = matchSeries.seriesScore.team1;
+  const t2Wins = matchSeries.seriesScore.team2;
+
+  const record = {
+    id: Date.now(),
+    dateString: new Date().toLocaleDateString(),
+    timeString: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    duration: document.getElementById("matchStopwatch").innerText.replace("⏱️ ", "").replace("⏱ ", ""),
+    format: matchSeries.format,
+    playerMode: matchSeries.playerMode,
+    engine: matchSeries.engine,
+    winCond: matchSeries.winCond,
+    targetScore: matchSeries.targetScore,
+    seriesScore: { ...matchSeries.seriesScore },
+    winner: t1Wins > t2Wins ? 1 : 2,
+    players: { ...matchSeries.players },
+    completedGames: JSON.parse(JSON.stringify(matchSeries.completedGames))
+  };
+
+  try {
+    const list = getStoredHistory();
+    list.unshift(record);
+    localStorage.setItem("picklepoint_match_history", JSON.stringify(list));
+    if (activeGame) activeGame.savedToHistory = true;
+  } catch (e) {
+    console.error("Local storage error:", e);
+  }
+}
+
+function openMatchHistoryModal() {
+  renderMatchHistoryList();
+  openModal("historyModal");
+}
+
+function renderMatchHistoryList() {
+  const container = document.getElementById("historyListContainer");
+  const history = getStoredHistory();
+  container.innerHTML = "";
+
+  if (history.length === 0) {
+    container.innerHTML = `
+      <div style="padding:24px; text-align:center; color:var(--text-muted); font-size:0.85rem;">
+        No matches recorded yet.<br>Completed matches are automatically saved here.
+      </div>
+    `;
+    return;
+  }
+
+  history.forEach(item => {
+    const isDoubles = (item.playerMode === "DOUBLES");
+    const t1Names = isDoubles ? `${item.players.p1} & ${item.players.p2}` : item.players.p1;
+    const t2Names = isDoubles ? `${item.players.p3} & ${item.players.p4}` : item.players.p3;
+    const winnerName = (item.winner === 1) ? "Team 1" : "Team 2";
+
+    let gamePillsHtml = "";
+    if (item.completedGames && item.completedGames.length > 0) {
+      item.completedGames.forEach(g => {
+        gamePillsHtml += `<span class="history-pill">G${g.gameNumber}: ${g.score1}-${g.score2}</span>`;
+      });
+    }
+
+    const card = document.createElement("div");
+    card.className = "history-card";
+    card.innerHTML = `
+      <div class="history-card-header">
+        <div class="history-teams">${t1Names} <span style="color:var(--text-muted); font-size:0.8rem;">vs</span> ${t2Names}</div>
+        <div style="font-size:0.75rem; font-weight:800; color:var(--accent-green);">🏆 ${winnerName} Won</div>
+      </div>
+      <div class="history-meta">
+        ${item.dateString} ${item.timeString} • ⏱ ${item.duration} • ${item.playerMode} (${item.engine === 'RALLY' ? 'Rally' : 'Side-Out'}) • Series: ${item.seriesScore.team1} - ${item.seriesScore.team2}
+      </div>
+      <div class="history-score-row">
+        <div class="history-scores-pills">${gamePillsHtml}</div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-sm btn-accent" style="padding:4px 8px; font-size:0.75rem;" onclick="viewArchivedMatch(${item.id})">📊 View Report</button>
+          <button class="btn-sm" style="padding:4px 8px; font-size:0.75rem; color:var(--accent-rose);" onclick="deleteArchivedMatch(${item.id})">🗑</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function viewArchivedMatch(id) {
+  const history = getStoredHistory();
+  const match = history.find(m => m.id === id);
+  if (!match) return;
+
+  activeArchiveInspection = match;
+  closeModal("historyModal");
+  openModal("summaryModal");
+}
+
+function deleteArchivedMatch(id) {
+  if (!confirm("Delete this match record from device storage?")) return;
+  let history = getStoredHistory();
+  history = history.filter(m => m.id !== id);
+  try {
+    localStorage.setItem("picklepoint_match_history", JSON.stringify(history));
+  } catch (e) {}
+  renderMatchHistoryList();
+}
+
+function clearAllArchivedMatches() {
+  if (!confirm("Are you sure you want to delete ALL past match records on this device? This cannot be undone.")) return;
+  try {
+    localStorage.removeItem("picklepoint_match_history");
+  } catch (e) {}
+  renderMatchHistoryList();
+}
+
+/* =========================================================
+   CHALLENGE REVIEW ENGINE (OFFICIAL TOURNAMENT COMPLIANT)
+   ========================================================= */
 
 let selectedChallengingTeam = 1;
 let selectedChallengeType = "Line Call (In / Out)";
@@ -1816,7 +2021,7 @@ function updateChallengeModalUI() {
 
   if (currentChallengerLeft === 0) {
     warnBanner.style.display = "block";
-    warnBanner.innerHTML = `⚠️️ <strong>ZERO CHALLENGES REMAINING:</strong> Team ${selectedChallengingTeam} has no free challenges. If UPHELD, <strong>+1 TECHNICAL PENALTY POINT</strong> will be awarded to Team ${opponentTeamNum}!`;
+    warnBanner.innerHTML = `⚠️ <strong>ZERO CHALLENGES REMAINING:</strong> Team ${selectedChallengingTeam} has no free challenges. If UPHELD, <strong>+1 TECHNICAL PENALTY POINT</strong> will be awarded to Team ${opponentTeamNum}!`;
     subUpheld.innerHTML = `Call Stands<br>+1 Pt to Team ${opponentTeamNum}`;
   } else {
     warnBanner.style.display = "none";
@@ -1916,6 +2121,10 @@ function resolveChallenge(ruling) {
   closeModal("challengeModal");
   updateUI();
 }
+
+/* =========================================================
+   Scoring & Dual Undo/Redo Engine
+   ========================================================= */
 
 function saveStateSnapshot() {
   undoStack.push(JSON.stringify({
@@ -2259,6 +2468,7 @@ function completeCurrentGame(winningTeam) {
 
   if (t1Wins >= requiredToWin || t2Wins >= requiredToWin) {
     pauseMatchTimer();
+    saveMatchToLocalStorage();
     const champ = (t1Wins > t2Wins) ? "Team 1" : "Team 2";
     document.getElementById("champTeamName").innerText = `🏆 ${champ} Wins the Match!`;
     document.getElementById("champSeriesScore").innerText =
@@ -2761,11 +2971,11 @@ function renderLiveBoxScore() {
 
   if (isMatchScope) {
     matchSeries.completedGames.forEach(g => {
-      for (const [p, d] of Object.entries(g.boxScore)) {
+      for (const [p, d] of Object.entries(g.boxScore || {})) {
         if (!displayStats[p]) displayStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
-        displayStats[p].W += d.W;
-        displayStats[p].E += d.E;
-        displayStats[p].POP += d.POP;
+        displayStats[p].W += d.W || 0;
+        displayStats[p].E += d.E || 0;
+        displayStats[p].POP += d.POP || 0;
         if (d.shots) {
           for (const [shot, count] of Object.entries(d.shots)) {
             displayStats[p].shots[shot] = (displayStats[p].shots[shot] || 0) + count;
@@ -2775,11 +2985,11 @@ function renderLiveBoxScore() {
     });
   }
 
-  for (const [p, d] of Object.entries(activeGame.boxScore)) {
+  for (const [p, d] of Object.entries(activeGame.boxScore || {})) {
     if (!displayStats[p]) displayStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
-    displayStats[p].W += d.W;
-    displayStats[p].E += d.E;
-    displayStats[p].POP += d.POP;
+    displayStats[p].W += d.W || 0;
+    displayStats[p].E += d.E || 0;
+    displayStats[p].POP += d.POP || 0;
     if (d.shots) {
       for (const [shot, count] of Object.entries(d.shots)) {
         displayStats[p].shots[shot] = (displayStats[p].shots[shot] || 0) + count;
@@ -2816,15 +3026,28 @@ function renderLiveBoxScore() {
 function renderSummaryStats(filter) {
   summaryViewFilter = filter;
 
+  const src = activeArchiveInspection || matchSeries;
+  const isInspection = !!activeArchiveInspection;
+
+  document.getElementById("summaryModalTitle").innerText = isInspection
+    ? `📊 Match Report (${src.dateString || 'Archive'})`
+    : `📊 Match Report, Analytics & Point Log`;
+
   document.getElementById("tabAgg").className = `btn-sm ${filter === 'AGGREGATE' ? 'btn-accent' : ''}`;
   document.getElementById("tabG1").className = `btn-sm ${filter === 1 ? 'btn-accent' : ''}`;
   document.getElementById("tabG2").className = `btn-sm ${filter === 2 ? 'btn-accent' : ''}`;
   document.getElementById("tabG3").className = `btn-sm ${filter === 3 ? 'btn-accent' : ''}`;
 
-  document.getElementById("tabG2").style.display = (matchSeries.completedGames.length >= 1 || matchSeries.currentGameIndex >= 2) ? "block" : "none";
-  document.getElementById("tabG3").style.display = (matchSeries.completedGames.length >= 2 || matchSeries.currentGameIndex >= 3) ? "block" : "none";
+  const numGames = (src.completedGames || []).length;
+  const showG2 = isInspection ? (numGames >= 2) : (numGames >= 1 || src.currentGameIndex >= 2);
+  const showG3 = isInspection ? (numGames >= 3) : (numGames >= 2 || src.currentGameIndex >= 3);
+  document.getElementById("tabG2").style.display = showG2 ? "block" : "none";
+  document.getElementById("tabG3").style.display = showG3 ? "block" : "none";
 
-  const allPlayers = Object.keys(activeGame.boxScore);
+  const allPlayers = isInspection
+    ? (src.playerMode === "DOUBLES" ? [src.players.p1, src.players.p2, src.players.p3, src.players.p4] : [src.players.p1, src.players.p3])
+    : Object.keys(activeGame.boxScore);
+
   const combinedStats = {};
   allPlayers.forEach(p => { combinedStats[p] = { W: 0, E: 0, POP: 0, shots: {} }; });
 
@@ -2832,33 +3055,35 @@ function renderSummaryStats(filter) {
   const ralliesToDisplay = [];
 
   if (filter === "AGGREGATE") {
-    matchSeries.completedGames.forEach(g => {
+    (src.completedGames || []).forEach(g => {
       gamesToTally.push(g.boxScore);
       if (g.rallies) ralliesToDisplay.push(...g.rallies);
     });
 
-    const isAlreadyArchived = matchSeries.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
-    if (!isAlreadyArchived && !activeGame.isFinished && activeGame) {
-      gamesToTally.push(activeGame.boxScore);
-      if (activeGame.rallies) ralliesToDisplay.push(...activeGame.rallies);
+    if (!isInspection) {
+      const isAlreadyArchived = src.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
+      if (!isAlreadyArchived && !activeGame.isFinished && activeGame) {
+        gamesToTally.push(activeGame.boxScore);
+        if (activeGame.rallies) ralliesToDisplay.push(...activeGame.rallies);
+      }
     }
   } else {
-    const found = matchSeries.completedGames.find(g => g.gameNumber === filter);
+    const found = (src.completedGames || []).find(g => g.gameNumber === filter);
     if (found) {
       gamesToTally.push(found.boxScore);
       if (found.rallies) ralliesToDisplay.push(...found.rallies);
-    } else if (activeGame.gameNumber === filter && activeGame) {
+    } else if (!isInspection && activeGame.gameNumber === filter && activeGame) {
       gamesToTally.push(activeGame.boxScore);
       if (activeGame.rallies) ralliesToDisplay.push(...activeGame.rallies);
     }
   }
 
   gamesToTally.forEach(bs => {
-    for (const [pName, data] of Object.entries(bs)) {
+    for (const [pName, data] of Object.entries(bs || {})) {
       if (!combinedStats[pName]) combinedStats[pName] = { W: 0, E: 0, POP: 0, shots: {} };
-      combinedStats[pName].W += data.W;
-      combinedStats[pName].E += data.E;
-      combinedStats[pName].POP += data.POP;
+      combinedStats[pName].W += data.W || 0;
+      combinedStats[pName].E += data.E || 0;
+      combinedStats[pName].POP += data.POP || 0;
       if (data.shots) {
         for (const [shot, count] of Object.entries(data.shots)) {
           combinedStats[pName].shots[shot] = (combinedStats[pName].shots[shot] || 0) + count;
@@ -2867,24 +3092,27 @@ function renderSummaryStats(filter) {
     }
   });
 
-  const isDoubles = (matchSeries.playerMode === "DOUBLES");
-  const t1Name = isDoubles ? `Team 1 (${matchSeries.players.p1} & ${matchSeries.players.p2})` : `Team 1 (${matchSeries.players.p1})`;
-  const t2Name = isDoubles ? `Team 2 (${matchSeries.players.p3} & ${matchSeries.players.p4})` : `Team 2 (${matchSeries.players.p3})`;
+  const isDoubles = (src.playerMode === "DOUBLES");
+  const t1Name = isDoubles ? `Team 1 (${src.players.p1} & ${src.players.p2})` : `Team 1 (${src.players.p1})`;
+  const t2Name = isDoubles ? `Team 2 (${src.players.p3} & ${src.players.p4})` : `Team 2 (${src.players.p3})`;
 
   let gameScoresHtml = "";
-  if (matchSeries.completedGames.length > 0) {
-    matchSeries.completedGames.forEach(g => {
+  if (src.completedGames && src.completedGames.length > 0) {
+    src.completedGames.forEach(g => {
       gameScoresHtml += `<span style="background:#1e293b; border:1px solid #475569; padding:2px 8px; border-radius:4px; margin-right:6px; font-weight:700;">Game ${g.gameNumber}: ${g.score1}-${g.score2} (T${g.winner} W)</span>`;
     });
   }
-  const isAlreadyArchived = matchSeries.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
-  if (!isAlreadyArchived && activeGame) {
-    gameScoresHtml += `<span style="background:#1e293b; border:1px solid #38bdf8; color:#38bdf8; padding:2px 8px; border-radius:4px; font-weight:700;">Game ${activeGame.gameNumber}: ${activeGame.score1}-${activeGame.score2} (Live)</span>`;
+
+  if (!isInspection) {
+    const isAlreadyArchived = src.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
+    if (!isAlreadyArchived && activeGame) {
+      gameScoresHtml += `<span style="background:#1e293b; border:1px solid #38bdf8; color:#38bdf8; padding:2px 8px; border-radius:4px; font-weight:700;">Game ${activeGame.gameNumber}: ${activeGame.score1}-${activeGame.score2} (Live)</span>`;
+    }
   }
 
-  const seriesTally = (matchSeries.format === 'BEST_OF_3') 
-    ? `Team 1: <strong>${matchSeries.seriesScore.team1}</strong> — Team 2: <strong>${matchSeries.seriesScore.team2}</strong>` 
-    : `Single Game (${activeGame.score1} - ${activeGame.score2})`;
+  const seriesTally = (src.format === 'BEST_OF_3') 
+    ? `Team 1: <strong>${src.seriesScore.team1}</strong> — Team 2: <strong>${src.seriesScore.team2}</strong>` 
+    : `Single Game (${src.completedGames && src.completedGames[0] ? src.completedGames[0].score1 + '-' + src.completedGames[0].score2 : activeGame ? activeGame.score1 + '-' + activeGame.score2 : ''})`;
 
   document.getElementById("summaryMatchReportBox").innerHTML = `
     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:6px;">
@@ -2893,12 +3121,12 @@ function renderSummaryStats(filter) {
     </div>
     <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
       <span style="color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; font-weight:700;">Games:</span>
-      ${gameScoresHtml}
+      ${gameScoresHtml || 'No completed games yet'}
     </div>
   `;
 
-  const t1Players = isDoubles ? [matchSeries.players.p1, matchSeries.players.p2] : [matchSeries.players.p1];
-  const t2Players = isDoubles ? [matchSeries.players.p3, matchSeries.players.p4] : [matchSeries.players.p3];
+  const t1Players = isDoubles ? [src.players.p1, src.players.p2] : [src.players.p1];
+  const t2Players = isDoubles ? [src.players.p3, src.players.p4] : [src.players.p3];
 
   let t1W = 0, t1E = 0, t1POP = 0;
   t1Players.forEach(p => {
@@ -3003,25 +3231,25 @@ function renderSummaryStats(filter) {
   }
 
   const printGen = document.getElementById("printGeneratedDate");
-  if (printGen) printGen.innerText = `Date: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+  if (printGen) printGen.innerText = isInspection ? `Date: ${src.dateString} ${src.timeString}` : `Date: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
   
   const printFmt = document.getElementById("printMetaFormat");
-  if (printFmt) printFmt.innerText = `${matchSeries.playerMode} (${matchSeries.engine === 'RALLY' ? 'Rally' : 'Side-Out'})`;
+  if (printFmt) printFmt.innerText = `${src.playerMode} (${src.engine === 'RALLY' ? 'Rally' : 'Side-Out'})`;
 
   const printEng = document.getElementById("printMetaEngine");
-  if (printEng) printEng.innerText = (matchSeries.engine === 'RALLY') ? 'Rally Scoring' : 'Side-Out Scoring';
+  if (printEng) printEng.innerText = (src.engine === 'RALLY') ? 'Rally Scoring' : 'Side-Out Scoring';
 
   const printTgt = document.getElementById("printMetaTarget");
-  if (printTgt) printTgt.innerText = `${matchSeries.targetScore} Pts (${matchSeries.winCond === 'WIN_BY_2' ? 'Win by 2' : 'Sudden Death'})`;
+  if (printTgt) printTgt.innerText = `${src.targetScore} Pts (${src.winCond === 'WIN_BY_2' ? 'Win by 2' : 'Sudden Death'})`;
 
   const printDur = document.getElementById("printMetaDuration");
-  if (printDur) printDur.innerText = document.getElementById("matchStopwatch").innerText.replace("⏱️ ", "").replace("⏱ ", "");
+  if (printDur) printDur.innerText = isInspection ? src.duration : document.getElementById("matchStopwatch").innerText.replace("⏱️ ", "").replace("⏱ ", "");
 
   const printRes = document.getElementById("printMetaResult");
   if (printRes) {
-    printRes.innerText = (matchSeries.format === 'BEST_OF_3') 
-      ? `Series ${matchSeries.seriesScore.team1} - ${matchSeries.seriesScore.team2}` 
-      : `${activeGame.score1} - ${activeGame.score2}`;
+    printRes.innerText = (src.format === 'BEST_OF_3') 
+      ? `Series ${src.seriesScore.team1} - ${src.seriesScore.team2}` 
+      : `${src.completedGames && src.completedGames[0] ? src.completedGames[0].score1 + '-' + src.completedGames[0].score2 : activeGame ? activeGame.score1 + '-' + activeGame.score2 : ''}`;
   }
 }
 
@@ -3029,43 +3257,52 @@ function printScoresheetPDF() {
   renderSummaryStats("AGGREGATE");
   setTimeout(() => {
     window.print();
-  }, 100);
+  }, 150);
 }
 
 function exportToCSV() {
+  const src = activeArchiveInspection || matchSeries;
+  const isInspection = !!activeArchiveInspection;
+
   let csv = "\uFEFF";
   csv += "PICKLEPOINT MATCH REPORT & ANALYTICS\n";
-  csv += `Date,${new Date().toLocaleDateString()}\n`;
-  csv += `Match Duration,${document.getElementById("matchStopwatch").innerText.replace("⏱️ ", "").replace("⏱ ", "")}\n`;
-  csv += `Format,${matchSeries.format} (${matchSeries.playerMode})\n`;
-  csv += `Scoring Engine,${matchSeries.engine === 'RALLY' ? 'Rally Scoring' : 'Side-Out Scoring'}\n`;
-  csv += `Series Score,Team 1: ${matchSeries.seriesScore.team1} - Team 2: ${matchSeries.seriesScore.team2}\n\n`;
+  csv += `Date,${isInspection ? src.dateString : new Date().toLocaleDateString()}\n`;
+  csv += `Match Duration,${isInspection ? src.duration : document.getElementById("matchStopwatch").innerText.replace("⏱️ ", "").replace("⏱ ", "")}\n`;
+  csv += `Format,${src.format} (${src.playerMode})\n`;
+  csv += `Scoring Engine,${src.engine === 'RALLY' ? 'Rally Scoring' : 'Side-Out Scoring'}\n`;
+  csv += `Series Score,Team 1: ${src.seriesScore.team1} - Team 2: ${src.seriesScore.team2}\n\n`;
 
   csv += "1. MATCH SUMMARY (GAME BREAKDOWN)\n";
   csv += "Game #,Winner,Final Score\n";
-  matchSeries.completedGames.forEach(g => {
+  (src.completedGames || []).forEach(g => {
     csv += `Game ${g.gameNumber},Team ${g.winner},${g.score1} - ${g.score2}\n`;
   });
-  const isAlreadyArchived = matchSeries.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
-  if (!isAlreadyArchived && !activeGame.isFinished && activeGame) {
-    csv += `Game ${activeGame.gameNumber} (In Progress),-,${activeGame.score1} - ${activeGame.score2}\n`;
+
+  if (!isInspection) {
+    const isAlreadyArchived = src.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
+    if (!isAlreadyArchived && !activeGame.isFinished && activeGame) {
+      csv += `Game ${activeGame.gameNumber} (In Progress),-,${activeGame.score1} - ${activeGame.score2}\n`;
+    }
   }
   csv += "\n";
 
   csv += "2. TEAM PERFORMANCE ANALYSIS\n";
   csv += "Team,Winners,Errors,Pop-ups Conceded,Net Differential\n";
   
-  const isDoubles = (matchSeries.playerMode === "DOUBLES");
-  const allPlayers = Object.keys(activeGame.boxScore);
+  const isDoubles = (src.playerMode === "DOUBLES");
+  const allPlayers = isInspection
+    ? (src.playerMode === "DOUBLES" ? [src.players.p1, src.players.p2, src.players.p3, src.players.p4] : [src.players.p1, src.players.p3])
+    : Object.keys(activeGame.boxScore);
+
   const combinedStats = {};
   allPlayers.forEach(p => { combinedStats[p] = { W: 0, E: 0, POP: 0, shots: {} }; });
 
-  matchSeries.completedGames.forEach(g => {
-    for (const [p, d] of Object.entries(g.boxScore)) {
+  (src.completedGames || []).forEach(g => {
+    for (const [p, d] of Object.entries(g.boxScore || {})) {
       if (!combinedStats[p]) combinedStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
-      combinedStats[p].W += d.W;
-      combinedStats[p].E += d.E;
-      combinedStats[p].POP += d.POP;
+      combinedStats[p].W += d.W || 0;
+      combinedStats[p].E += d.E || 0;
+      combinedStats[p].POP += d.POP || 0;
       if (d.shots) {
         for (const [s, c] of Object.entries(d.shots)) {
           combinedStats[p].shots[s] = (combinedStats[p].shots[s] || 0) + c;
@@ -3074,22 +3311,25 @@ function exportToCSV() {
     }
   });
 
-  if (!isAlreadyArchived && !activeGame.isFinished && activeGame) {
-    for (const [p, d] of Object.entries(activeGame.boxScore)) {
-      if (!combinedStats[p]) combinedStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
-      combinedStats[p].W += d.W;
-      combinedStats[p].E += d.E;
-      combinedStats[p].POP += d.POP;
-      if (d.shots) {
-        for (const [s, c] of Object.entries(d.shots)) {
-          combinedStats[p].shots[s] = (combinedStats[p].shots[s] || 0) + c;
+  if (!isInspection) {
+    const isAlreadyArchived = src.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
+    if (!isAlreadyArchived && !activeGame.isFinished && activeGame) {
+      for (const [p, d] of Object.entries(activeGame.boxScore || {})) {
+        if (!combinedStats[p]) combinedStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
+        combinedStats[p].W += d.W || 0;
+        combinedStats[p].E += d.E || 0;
+        combinedStats[p].POP += d.POP || 0;
+        if (d.shots) {
+          for (const [s, c] of Object.entries(d.shots)) {
+            combinedStats[p].shots[s] = (combinedStats[p].shots[s] || 0) + c;
+          }
         }
       }
     }
   }
 
-  const t1Players = isDoubles ? [matchSeries.players.p1, matchSeries.players.p2] : [matchSeries.players.p1];
-  const t2Players = isDoubles ? [matchSeries.players.p3, matchSeries.players.p4] : [matchSeries.players.p3];
+  const t1Players = isDoubles ? [src.players.p1, src.players.p2] : [src.players.p1];
+  const t2Players = isDoubles ? [src.players.p3, src.players.p4] : [src.players.p3];
 
   let t1W = 0, t1E = 0, t1POP = 0;
   t1Players.forEach(p => {
@@ -3131,11 +3371,14 @@ function exportToCSV() {
   csv += "Rally #,Game #,Score Call,Server,Point Awarded To,Deciding Player,Outcome / Shot Details,Setup Conceded By\n";
 
   const allRallies = [];
-  matchSeries.completedGames.forEach(g => {
+  (src.completedGames || []).forEach(g => {
     if (g.rallies) allRallies.push(...g.rallies);
   });
-  if (!isAlreadyArchived && !activeGame.isFinished && activeGame && activeGame.rallies) {
-    allRallies.push(...activeGame.rallies);
+  if (!isInspection) {
+    const isAlreadyArchived = src.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
+    if (!isAlreadyArchived && !activeGame.isFinished && activeGame && activeGame.rallies) {
+      allRallies.push(...activeGame.rallies);
+    }
   }
 
   allRallies.forEach((r, idx) => {
@@ -3164,10 +3407,28 @@ function exportToCSV() {
 function openModal(id) {
   document.getElementById(id).classList.add("open");
   if (id === "summaryModal") renderSummaryStats("AGGREGATE");
+  if (id === "settingsModal") {
+    document.getElementById("cfgSeriesFormat").value = matchSeries.format;
+    document.getElementById("cfgPlayerMode").value = matchSeries.playerMode;
+    document.getElementById("cfgEngine").value = matchSeries.engine;
+    document.getElementById("cfgWinCond").value = matchSeries.winCond;
+    document.getElementById("cfgChallenges").value = matchSeries.challengeMode;
+    document.getElementById("cfgTargetScore").value = matchSeries.targetScore;
+    document.getElementById("cfgT1Handicap").value = matchSeries.handicap1;
+    document.getElementById("cfgT2Handicap").value = matchSeries.handicap2;
+    document.getElementById("cfgP1").value = matchSeries.players.p1;
+    document.getElementById("cfgP2").value = matchSeries.players.p2 || "";
+    document.getElementById("cfgP3").value = matchSeries.players.p3;
+    document.getElementById("cfgP4").value = matchSeries.players.p4 || "";
+    togglePlayerRosterInputs(matchSeries.playerMode);
+  }
 }
 
 function closeModal(id) {
   document.getElementById(id).classList.remove("open");
+  if (id === "summaryModal") {
+    activeArchiveInspection = null;
+  }
 }
 
 function togglePlayerRosterInputs(mode) {
