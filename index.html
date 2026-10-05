@@ -478,10 +478,10 @@
       opacity: 0.85;
     }
 
-    /* Action Row with 4 Balanced Buttons */
+    /* Action Row */
     .action-row {
       display: grid;
-      grid-template-columns: 1.5fr 1fr 0.85fr 0.85fr;
+      grid-template-columns: 1.4fr 1fr 0.8fr 0.8fr;
       gap: 6px;
       margin-bottom: 12px;
     }
@@ -530,7 +530,7 @@
       transition: opacity 0.2s ease;
     }
 
-    /* Live Box Score */
+    /* Live Box Score Card */
     .stats-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -547,6 +547,11 @@
       color: var(--accent-blue);
       display: flex;
       justify-content: space-between;
+      align-items: center;
+    }
+    .scope-toggle-group {
+      display: flex;
+      gap: 4px;
     }
     table.stats-table {
       width: 100%;
@@ -597,7 +602,7 @@
       border: 1px solid var(--card-border);
       border-radius: 14px;
       width: 100%;
-      max-width: 760px;
+      max-width: 740px;
       max-height: 92vh;
       overflow-y: auto;
       padding: 18px;
@@ -621,6 +626,10 @@
       color: var(--text-muted);
       font-size: 1.4rem;
       cursor: pointer;
+    }
+
+    .print-only-header {
+      display: none;
     }
 
     /* Rally Attribution Layout */
@@ -762,50 +771,136 @@
       cursor: pointer;
     }
 
-    /* Print / PDF Output Styling */
+    /* =========================================================
+       PRINT & PDF STYLESHEET (Full Flowing A4 / Letter)
+       ========================================================= */
+    @page {
+      size: A4 portrait;
+      margin: 12mm 15mm;
+    }
+
     @media print {
       body {
         background: #ffffff !important;
-        color: #000000 !important;
+        color: #0f172a !important;
+        padding-bottom: 0 !important;
+        font-size: 9pt !important;
       }
+
       .no-print, header, .controls-grid, .action-row, .court-card, .quick-pref-bar, .series-bar, .scoreboard, .stats-card {
         display: none !important;
       }
+
       .modal-overlay {
         position: static !important;
-        background: none !important;
+        background: transparent !important;
         display: block !important;
         padding: 0 !important;
       }
+
       .modal-content {
         max-width: 100% !important;
         max-height: none !important;
         overflow: visible !important;
         box-shadow: none !important;
         border: none !important;
-        color: #000000 !important;
-        background: #ffffff !important;
+        color: #0f172a !important;
+        background: transparent !important;
         padding: 0 !important;
       }
+
+      .close-btn, #summaryTabGroup {
+        display: none !important;
+      }
+
+      .print-only-header {
+        display: block !important;
+        border-bottom: 2px solid #0f172a;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+      }
+      .print-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+      .print-brand {
+        font-size: 1.35rem;
+        font-weight: 900;
+        letter-spacing: -0.5px;
+      }
+      .print-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        padding: 6px 10px;
+        border-radius: 6px;
+        margin-top: 6px;
+        font-size: 8pt;
+      }
+
+      #summaryMatchReportBox {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      #summaryTeamSnapshot {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        margin-bottom: 12px !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      #summaryTeamSnapshot > div {
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 8px 10px !important;
+        color: #0f172a !important;
+      }
+
       .rally-log-scroll {
         max-height: none !important;
         overflow: visible !important;
+        border: 1px solid #cbd5e1 !important;
       }
+
       table.stats-table {
-        color: #000000 !important;
-        border: 1px solid #cbd5e1;
+        width: 100% !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        border-collapse: collapse !important;
+        font-size: 8pt !important;
       }
+
+      thead {
+        display: table-header-group !important;
+      }
+
+      tr {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+
       table.stats-table th {
         background: #f1f5f9 !important;
-        color: #000000 !important;
-        border-bottom: 2px solid #94a3b8 !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        padding: 5px 4px !important;
+        font-weight: 800 !important;
       }
+
       table.stats-table td {
-        border-bottom: 1px solid #cbd5e1 !important;
-        color: #000000 !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #0f172a !important;
+        padding: 4px !important;
       }
-      table { page-break-inside: auto; }
-      tr { page-break-inside: avoid; page-break-after: auto; }
     }
   </style>
 </head>
@@ -881,7 +976,7 @@
         <span class="challenge-pill" id="t1ChallengeBadge">🚩 2 Left</span>
       </div>
       <div class="serving-indicator" id="t1ServingTag">Serving</div>
-      <div class="frozen-badge" id="t1FrozenBadge" style="display:none;">❄️ FROZEN</div>
+      <div class="frozen-badge" id="t1FrozenBadge" style="display:none;">❄ FROZEN</div>
     </div>
 
     <!-- Center Callout -->
@@ -961,11 +1056,14 @@
     <button class="undo-btn" id="btnRedo" onclick="redoLastRally()">↪ Redo</button>
   </div>
 
-  <!-- Live Box Score -->
+  <!-- Live Box Score with Scope Toggle -->
   <div class="stats-card">
     <div class="stats-title">
       <span id="boxScoreHeaderTitle">Live Match Player Box Score</span>
-      <span style="font-size:0.7rem; color:var(--text-muted);">Dual Attribution Active</span>
+      <div class="scope-toggle-group">
+        <button class="btn-sm btn-accent" id="btnScopeMatch" onclick="setLiveBoxScope('MATCH')">Match Total</button>
+        <button class="btn-sm" id="btnScopeGame" onclick="setLiveBoxScope('GAME')">Current Game</button>
+      </div>
     </div>
     <table class="stats-table">
       <thead>
@@ -983,9 +1081,7 @@
   </div>
 </div>
 
-<!-- =========================================================
-     MODAL: VIDEO / LINE CALL CHALLENGE REVIEW (OFFICIAL RULES)
-     ========================================================= -->
+<!-- MODAL: Video Review / Challenge -->
 <div class="modal-overlay" id="challengeModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -993,12 +1089,10 @@
       <button class="close-btn" onclick="closeModal('challengeModal')">✕</button>
     </div>
 
-    <!-- Dynamic Penalty Warning Banner -->
     <div id="chPenaltyWarning" style="display:none; background:#7f1d1d; border:1px solid #ef4444; color:#fecaca; padding:10px 12px; border-radius:8px; font-size:0.78rem; font-weight:700; margin-bottom:12px;">
       ⚠️ ZERO CHALLENGES REMAINING: If this review is UPHELD (unsuccessful), a +1 TECHNICAL PENALTY POINT will be awarded to the opponent!
     </div>
 
-    <!-- Step 1: Who initiated the challenge? -->
     <div class="attr-section">
       <div class="attr-label">Challenging Team</div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
@@ -1013,19 +1107,17 @@
       </div>
     </div>
 
-    <!-- Step 2: What is being reviewed? -->
     <div class="attr-section">
       <div class="attr-label">Call Under Review</div>
       <div class="chip-group" id="challengeTypeGroup">
         <button class="tag-chip active-win" onclick="selectChallengeType(this, 'Line Call (In / Out)')">🎾 Line Call (In / Out)</button>
         <button class="tag-chip" onclick="selectChallengeType(this, 'Kitchen / NVZ Fault')">🚫 Kitchen / NVZ Violation</button>
-        <button class="tag-chip" onclick="selectChallengeType(this, 'Net Touch / Body Contact')">🕸️ Net Touch / Body Contact</button>
+        <button class="tag-chip" onclick="selectChallengeType(this, 'Net Touch / Body Contact')">🕸️️ Net Touch / Body Contact</button>
         <button class="tag-chip" onclick="selectChallengeType(this, 'Service Foot Fault')">👟 Service Foot Fault</button>
         <button class="tag-chip" onclick="selectChallengeType(this, 'Double Bounce / Carry')">⚡ Double Bounce / Carry</button>
       </div>
     </div>
 
-    <!-- Step 3: Official Tournament Ruling -->
     <div class="attr-section">
       <div class="attr-label">Official Review Verdict</div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:6px;">
@@ -1041,7 +1133,6 @@
       </div>
     </div>
 
-    <!-- Cancel / Withdraw Button -->
     <div style="margin-top:10px; display:flex;">
       <button class="btn-sm" style="width:100%; justify-content:center; padding:10px; background:#334155; font-size:0.82rem;" onclick="cancelChallengeReview()">
         ✕ Cancel / Withdraw Review (No Call Change)
@@ -1187,17 +1278,37 @@
   </div>
 </div>
 
-<!-- =========================================================
-     MODAL: MATCH SUMMARY, ANALYTICS & POINT RALLY LOG
-     ========================================================= -->
+<!-- MODAL: MATCH REPORT, ANALYSIS & POINT-BY-POINT LOG -->
 <div class="modal-overlay" id="summaryModal">
   <div class="modal-content">
+    
+    <!-- Printable Header (Active on PDF Print) -->
+    <div class="print-only-header">
+      <div class="print-header-row">
+        <div>
+          <div class="print-brand">⚡ PicklePoint — Match Report & Analytics</div>
+          <div style="font-size:9pt; color:#475569; margin-top:2px;">Official Match Result & Tactical Statistical Breakdown</div>
+        </div>
+        <div style="text-align:right; font-size:8.5pt;">
+          <div id="printGeneratedDate">Date: —</div>
+          <div><strong>Duration:</strong> <span id="printMetaDuration">00:00</span></div>
+        </div>
+      </div>
+      <div class="print-meta-grid">
+        <div><strong>Format:</strong> <span id="printMetaFormat">Doubles (Rally)</span></div>
+        <div><strong>Engine:</strong> <span id="printMetaEngine">Rally Scoring</span></div>
+        <div><strong>Target:</strong> <span id="printMetaTarget">11 Points</span></div>
+        <div><strong>Series Result:</strong> <span id="printMetaResult">0 - 0</span></div>
+      </div>
+    </div>
+
+    <!-- Web Header -->
     <div class="modal-header">
-      <div class="modal-title">📊 Match Summary, Analytics & Rally Log</div>
+      <div class="modal-title">📊 Match Report, Analytics & Point Log</div>
       <button class="close-btn" onclick="closeModal('summaryModal')">✕</button>
     </div>
 
-    <!-- Filter Buttons (Aggregate or Specific Games) -->
+    <!-- Filter Tabs -->
     <div style="display:flex; gap:6px; margin-bottom:12px;" id="summaryTabGroup">
       <button class="btn-sm btn-accent" id="tabAgg" onclick="renderSummaryStats('AGGREGATE')">Entire Match</button>
       <button class="btn-sm" id="tabG1" onclick="renderSummaryStats(1)">Game 1</button>
@@ -1205,11 +1316,21 @@
       <button class="btn-sm" id="tabG3" onclick="renderSummaryStats(3)" style="display:none;">Game 3</button>
     </div>
 
-    <!-- Team Totals Snapshot -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;" id="summaryTeamSnapshot"></div>
+    <!-- PART 1: MATCH REPORT -->
+    <div style="margin-bottom:14px;">
+      <div style="font-weight:800; font-size:0.85rem; color:var(--accent-amber); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">
+        1. Match Summary & Results
+      </div>
+      <div id="summaryMatchReportBox" style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px 14px; font-size:0.84rem; line-height:1.5;"></div>
+    </div>
 
-    <!-- Player Box Score Table -->
-    <div style="margin-bottom:8px; font-weight:800; font-size:0.85rem; color:var(--accent-blue);">Player Performance Box Score</div>
+    <!-- PART 2: MATCH ANALYSIS -->
+    <div style="margin-bottom:6px; font-weight:800; font-size:0.85rem; color:var(--accent-blue); text-transform:uppercase; letter-spacing:0.05em;">
+      2. Performance Analysis
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;" id="summaryTeamSnapshot"></div>
+
     <div style="overflow-x:auto; margin-bottom:16px;">
       <table class="stats-table">
         <thead>
@@ -1219,29 +1340,32 @@
             <th>Errors (-)</th>
             <th>Pop-ups (-)</th>
             <th>Differential (+/-)</th>
+            <th>Primary Weapon / Tendency</th>
           </tr>
         </thead>
         <tbody id="summaryTableBody"></tbody>
       </table>
     </div>
 
-    <!-- Point-by-Point Rally Log Section -->
+    <!-- PART 3: POINT-BY-POINT RALLY LOG -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <div style="font-weight:800; font-size:0.85rem; color:var(--accent-amber);">Point-by-Point Rally Log</div>
+      <div style="font-weight:800; font-size:0.85rem; color:var(--accent-amber); text-transform:uppercase; letter-spacing:0.05em;">
+        3. Point-by-Point Rally Log
+      </div>
       <div style="font-size:0.7rem; color:var(--text-muted);" id="summaryRallyCountBadge">0 Rallies</div>
     </div>
     
-    <div class="rally-log-scroll" style="max-height:260px; overflow-y:auto; border:1px solid #334155; border-radius:8px; margin-bottom:16px;">
+    <div class="rally-log-scroll" style="max-height:280px; overflow-y:auto; border:1px solid #334155; border-radius:8px; margin-bottom:16px;">
       <table class="stats-table">
         <thead>
           <tr>
-            <th style="width:40px;">#</th>
-            <th style="width:50px;">Game</th>
-            <th style="width:75px;">Score</th>
+            <th style="width:38px;">#</th>
+            <th style="width:48px;">Game</th>
+            <th style="width:72px;">Score</th>
             <th>Server</th>
             <th>Point To</th>
             <th>Deciding Player</th>
-            <th>Shot / Reason</th>
+            <th>Outcome / Shot Action</th>
             <th>Setup Conceded</th>
           </tr>
         </thead>
@@ -1249,13 +1373,13 @@
       </table>
     </div>
 
-    <!-- Export Buttons -->
+    <!-- Export Action Buttons -->
     <div class="no-print" style="display:flex; gap:8px;">
       <button class="btn-sm btn-accent" style="flex:1; justify-content:center; padding:10px;" onclick="exportToCSV()">
         📥 Export All to Excel (CSV)
       </button>
-      <button class="btn-sm" style="flex:1; justify-content:center; padding:10px;" onclick="window.print()">
-        🖨️ Export / Print PDF Sheet
+      <button class="btn-sm" style="flex:1; justify-content:center; padding:10px;" onclick="printScoresheetPDF()">
+        🖨️ Export / Print PDF Report
       </button>
     </div>
   </div>
@@ -1385,7 +1509,7 @@ const LOSING_REASONS = [
   { label: "⚠️ Unforced Miss", type: "ERROR" }
 ];
 
-/* Default: Single Game, Doubles, Rally, Sudden Death, Target 11 */
+/* Default State */
 let matchSeries = {
   format: "SINGLE_GAME",
   playerMode: "DOUBLES",
@@ -1410,8 +1534,9 @@ let matchSeries = {
 
 let activeGame = null;
 let undoStack = [];
-let redoStack = []; // Added Redo Stack
+let redoStack = [];
 let pendingRallyOutcome = null;
+let liveBoxScope = "MATCH"; // 'MATCH' or 'GAME'
 
 let breakIntervalId = null;
 let warmupIntervalId = null;
@@ -1606,7 +1731,7 @@ function updateTimerButtonUI() {
     btn.innerText = "⏸ Pause";
     btn.className = "btn-sm btn-accent";
   } else {
-    btn.innerText = "▶️ Start";
+    btn.innerText = "▶ Start";
     btn.className = "btn-sm";
   }
 }
@@ -1663,7 +1788,6 @@ function openChallengeModal() {
     return;
   }
 
-  // Pre-select team that just conceded
   if (activeGame && activeGame.rallies && activeGame.rallies.length > 0) {
     const lastWinner = activeGame.rallies[activeGame.rallies.length - 1].winningTeam;
     selectedChallengingTeam = (lastWinner === 1) ? 2 : 1;
@@ -1709,7 +1833,7 @@ function updateChallengeModalUI() {
 
   if (currentChallengerLeft === 0) {
     warnBanner.style.display = "block";
-    warnBanner.innerHTML = `⚠️ <strong>ZERO CHALLENGES REMAINING:</strong> Team ${selectedChallengingTeam} has no free challenges. If UPHELD, <strong>+1 TECHNICAL PENALTY POINT</strong> will be awarded to Team ${opponentTeamNum}!`;
+    warnBanner.innerHTML = `⚠️️ <strong>ZERO CHALLENGES REMAINING:</strong> Team ${selectedChallengingTeam} has no free challenges. If UPHELD, <strong>+1 TECHNICAL PENALTY POINT</strong> will be awarded to Team ${opponentTeamNum}!`;
     subUpheld.innerHTML = `Call Stands<br>+1 Pt to Team ${opponentTeamNum}`;
   } else {
     warnBanner.style.display = "none";
@@ -1747,7 +1871,6 @@ function resolveChallenge(ruling) {
           matchSeries = prevState.series;
           activeGame = prevState.game;
         }
-        saveStateSnapshot();
         executeRallyResolution(challenger, {
           primaryPlayer: (challenger === 1) ? matchSeries.players.p1 : matchSeries.players.p3,
           role: "WINNER",
@@ -1771,7 +1894,6 @@ function resolveChallenge(ruling) {
         `• Click CANCEL if the point is to be replayed.`
       );
       if (awardDirect) {
-        saveStateSnapshot();
         executeRallyResolution(challenger, {
           primaryPlayer: (challenger === 1) ? matchSeries.players.p1 : matchSeries.players.p3,
           role: "WINNER",
@@ -1785,7 +1907,6 @@ function resolveChallenge(ruling) {
     speakCallout(`Inconclusive video evidence. Original call stands. Team ${challenger} retains challenge.`);
     alert(`⚖️ INCONCLUSIVE RULING:\nVideo evidence was insufficient to overturn the on-court call.\n\nThe original call stands, and Team ${challenger} RETAINS their challenge!`);
   } else {
-    // Ruling: UPHELD
     if (challengesLeft > 0) {
       saveStateSnapshot();
       activeGame.challenges[`team${challenger}`]--;
@@ -1793,7 +1914,6 @@ function resolveChallenge(ruling) {
       speakCallout(`Call stands. Team ${challenger} loses one challenge.`);
       alert(`❌ Challenge UPHELD.\nThe on-court call stands.\nTeam ${challenger} has ${activeGame.challenges[`team${challenger}`]} challenge(s) remaining.`);
     } else {
-      saveStateSnapshot();
       playBeep(300, 0.4);
       speakCallout(`Call stands. Team ${challenger} had zero challenges. One technical penalty point awarded to Team ${opponent}.`);
       alert(`⚠️ Challenge UPHELD.\nTeam ${challenger} had 0 challenges remaining.\n\n+1 TECHNICAL PENALTY POINT awarded to Team ${opponent}!`);
@@ -1822,14 +1942,12 @@ function saveStateSnapshot() {
     timerSeconds: matchTimerSeconds,
     timerRunning: matchTimerRunning
   }));
-  // Reset redo stack when a new branch of history is initiated
   redoStack = [];
 }
 
 function undoLastRally() {
   if (undoStack.length === 0) return;
 
-  // Save current state into redoStack before reverting
   redoStack.push(JSON.stringify({
     series: matchSeries,
     game: activeGame,
@@ -1848,7 +1966,6 @@ function undoLastRally() {
 function redoLastRally() {
   if (redoStack.length === 0) return;
 
-  // Save current state into undoStack before restoring forward
   undoStack.push(JSON.stringify({
     series: matchSeries,
     game: activeGame,
@@ -1866,7 +1983,6 @@ function redoLastRally() {
 }
 
 function handleRallyClick(winningTeam) {
-  saveStateSnapshot();
   pendingRallyOutcome = { winningTeam: winningTeam, type: "POINT" };
 
   if (document.getElementById("chkDetailedAttr").checked) {
@@ -1877,7 +1993,6 @@ function handleRallyClick(winningTeam) {
 }
 
 function handleFaultClick() {
-  saveStateSnapshot();
   const receivingTeam = (activeGame.servingTeam === 1) ? 2 : 1;
   pendingRallyOutcome = { winningTeam: receivingTeam, type: "FAULT" };
 
@@ -1889,11 +2004,45 @@ function handleFaultClick() {
 }
 
 function quickAward(winningTeam) {
-  saveStateSnapshot();
   executeRallyResolution(winningTeam, null);
 }
 
+function getActiveReceiverName() {
+  const isSingles = (matchSeries.playerMode === "SINGLES");
+  const leftTeamKey = activeGame.team1OnLeft ? "team1" : "team2";
+  const rightTeamKey = activeGame.team1OnLeft ? "team2" : "team1";
+  const leftTeamScore = activeGame.team1OnLeft ? activeGame.score1 : activeGame.score2;
+  const rightTeamScore = activeGame.team1OnLeft ? activeGame.score2 : activeGame.score1;
+
+  let leftTop, leftBottom, rightTop, rightBottom;
+  if (isSingles) {
+    const pLeft = activeGame.positions[leftTeamKey].right;
+    const pRight = activeGame.positions[rightTeamKey].right;
+    leftBottom = (leftTeamScore % 2 === 0) ? pLeft : "";
+    leftTop = (leftTeamScore % 2 === 1) ? pLeft : "";
+    rightTop = (rightTeamScore % 2 === 0) ? pRight : "";
+    rightBottom = (rightTeamScore % 2 === 1) ? pRight : "";
+  } else {
+    leftTop = activeGame.positions[leftTeamKey].left;
+    leftBottom = activeGame.positions[leftTeamKey].right;
+    rightTop = activeGame.positions[rightTeamKey].right;
+    rightBottom = activeGame.positions[rightTeamKey].left;
+  }
+
+  const server = activeGame.activeServerName;
+  if (leftBottom === server) return rightTop || activeGame.positions[rightTeamKey].right;
+  if (leftTop === server) return rightBottom || activeGame.positions[rightTeamKey].left;
+  if (rightTop === server) return leftBottom || activeGame.positions[leftTeamKey].right;
+  if (rightBottom === server) return leftTop || activeGame.positions[leftTeamKey].left;
+
+  const recTeamKey = (activeGame.servingTeam === 1) ? "team2" : "team1";
+  return activeGame.positions[recTeamKey].right;
+}
+
 function executeRallyResolution(winningTeam, attr) {
+  // 1. Snapshot state prior to executing point
+  saveStateSnapshot();
+
   if (!matchTimerRunning && matchTimerSeconds === 0) {
     resumeMatchTimer();
   }
@@ -1901,34 +2050,58 @@ function executeRallyResolution(winningTeam, attr) {
   const isServingTeamWin = (winningTeam === activeGame.servingTeam);
   const currentServingPlayer = activeGame.activeServerName;
 
+  // 2. Intelligent Default Attribution if quick-awarded or skipped
+  if (!attr) {
+    const defaultScorer = (winningTeam === activeGame.servingTeam)
+      ? currentServingPlayer
+      : getActiveReceiverName();
+
+    attr = {
+      primaryPlayer: defaultScorer,
+      role: "WINNER",
+      shotLabel: "🎾 Rally Point",
+      shotType: "WINNER",
+      linkedPlayer: null
+    };
+  }
+
+  // 3. Update Box Score
   if (attr && attr.primaryPlayer) {
-    const pStats = activeGame.boxScore[attr.primaryPlayer];
-    if (pStats) {
-      if (attr.role === "WINNER") {
-        pStats.W++;
-      } else if (attr.role === "LOSER") {
-        if (attr.shotType === "POPUP") pStats.POP++;
-        else pStats.E++;
-      }
-      if (attr.shotLabel) {
-        pStats.shots[attr.shotLabel] = (pStats.shots[attr.shotLabel] || 0) + 1;
-      }
+    let pStats = activeGame.boxScore[attr.primaryPlayer];
+    if (!pStats) {
+      activeGame.boxScore[attr.primaryPlayer] = { W: 0, E: 0, POP: 0, shots: {} };
+      pStats = activeGame.boxScore[attr.primaryPlayer];
+    }
+
+    if (attr.role === "WINNER") {
+      pStats.W++;
+    } else if (attr.role === "LOSER") {
+      if (attr.shotType === "POPUP") pStats.POP++;
+      else pStats.E++;
+    }
+
+    if (attr.shotLabel) {
+      pStats.shots[attr.shotLabel] = (pStats.shots[attr.shotLabel] || 0) + 1;
     }
 
     if (attr.linkedPlayer) {
-      const linkedStats = activeGame.boxScore[attr.linkedPlayer];
-      if (linkedStats) {
-        if (attr.role === "WINNER") {
-          linkedStats.POP++;
-          linkedStats.shots["Setup Pop-up Conceded"] = (linkedStats.shots["Setup Pop-up Conceded"] || 0) + 1;
-        } else if (attr.role === "LOSER") {
-          linkedStats.W++;
-          linkedStats.shots["Smash / Putaway"] = (linkedStats.shots["Smash / Putaway"] || 0) + 1;
-        }
+      let linkedStats = activeGame.boxScore[attr.linkedPlayer];
+      if (!linkedStats) {
+        activeGame.boxScore[attr.linkedPlayer] = { W: 0, E: 0, POP: 0, shots: {} };
+        linkedStats = activeGame.boxScore[attr.linkedPlayer];
+      }
+
+      if (attr.role === "WINNER") {
+        linkedStats.POP++;
+        linkedStats.shots["Setup Pop-up Conceded"] = (linkedStats.shots["Setup Pop-up Conceded"] || 0) + 1;
+      } else if (attr.role === "LOSER") {
+        linkedStats.W++;
+        linkedStats.shots["Smash / Putaway"] = (linkedStats.shots["Smash / Putaway"] || 0) + 1;
       }
     }
   }
 
+  // 4. Run rules engine
   if (matchSeries.engine === "RALLY") {
     executeRallyEngine(winningTeam, isServingTeamWin);
   } else {
@@ -2390,6 +2563,13 @@ function bypassAttribution() {
    UI & Court Display
    ========================================================= */
 
+function setLiveBoxScope(scope) {
+  liveBoxScope = scope;
+  document.getElementById("btnScopeMatch").className = `btn-sm ${scope === 'MATCH' ? 'btn-accent' : ''}`;
+  document.getElementById("btnScopeGame").className = `btn-sm ${scope === 'GAME' ? 'btn-accent' : ''}`;
+  renderLiveBoxScore();
+}
+
 function updateUI() {
   const isBestOf3 = (matchSeries.format === "BEST_OF_3");
   document.getElementById("seriesPillsRow").style.display = isBestOf3 ? "flex" : "none";
@@ -2411,7 +2591,18 @@ function updateUI() {
   document.getElementById("calloutDisplay").innerText = getScoreCallout();
   document.getElementById("activeServerCallout").innerText = `Server: ${activeGame.activeServerName}`;
 
-  // Update Undo & Redo Button states
+  // Roster sync
+  const isDoubles = (matchSeries.playerMode === "DOUBLES");
+  document.getElementById("t1DisplayName").innerText = "Team 1";
+  document.getElementById("t1Roster").innerText = isDoubles
+    ? `${matchSeries.players.p1} & ${matchSeries.players.p2}`
+    : matchSeries.players.p1;
+  document.getElementById("t2DisplayName").innerText = "Team 2";
+  document.getElementById("t2Roster").innerText = isDoubles
+    ? `${matchSeries.players.p3} & ${matchSeries.players.p4}`
+    : matchSeries.players.p3;
+
+  // Undo / Redo button states
   const btnUndo = document.getElementById("btnUndo");
   const btnRedo = document.getElementById("btnRedo");
   if (btnUndo) {
@@ -2463,7 +2654,7 @@ function updateUI() {
 
   const engName = matchSeries.engine === "RALLY" ? "Rally" : "Side-Out";
   const winName = matchSeries.winCond === "WIN_BY_2" ? "Win by 2" : matchSeries.winCond === "SUDDEN_DEATH" ? "Sudden Death" : "Freeze";
-  const modeName = matchSeries.playerMode === "SINGLES" ? "Singles 1v1" : "Doubles 2v2";
+  const modeName = isDoubles ? "Doubles 2v2" : "Singles 1v1";
   document.getElementById("rulePill").innerText = `${modeName} • ${engName} • Target ${target} • ${winName}`;
   document.getElementById("courtModeIndicator").innerText = `${modeName} • Diagonal Trajectory`;
   document.getElementById("game3EndsIndicator").style.display = matchSeries.game3SwappedEnds ? "inline" : "none";
@@ -2593,23 +2784,54 @@ function highlightChip(id, isActive, className) {
 }
 
 function renderLiveBoxScore() {
-  document.getElementById("boxScoreHeaderTitle").innerText = (matchSeries.format === "BEST_OF_3")
-    ? `Live Game ${activeGame.gameNumber} Player Box Score`
-    : `Live Match Player Box Score`;
+  const isMatchScope = (liveBoxScope === "MATCH");
+  document.getElementById("boxScoreHeaderTitle").innerText = isMatchScope
+    ? "Live Match Player Box Score"
+    : `Live Game ${activeGame.gameNumber} Box Score`;
 
   const tbody = document.getElementById("boxScoreTbody");
   tbody.innerHTML = "";
 
-  const playerList = Object.keys(activeGame.boxScore);
+  const allPlayers = Object.keys(activeGame.boxScore);
+  const displayStats = {};
+  allPlayers.forEach(p => { displayStats[p] = { W: 0, E: 0, POP: 0, shots: {} }; });
 
-  playerList.forEach(name => {
-    const s = activeGame.boxScore[name] || { W: 0, E: 0, POP: 0, shots: {} };
+  if (isMatchScope) {
+    matchSeries.completedGames.forEach(g => {
+      for (const [p, d] of Object.entries(g.boxScore)) {
+        if (!displayStats[p]) displayStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
+        displayStats[p].W += d.W;
+        displayStats[p].E += d.E;
+        displayStats[p].POP += d.POP;
+        if (d.shots) {
+          for (const [shot, count] of Object.entries(d.shots)) {
+            displayStats[p].shots[shot] = (displayStats[p].shots[shot] || 0) + count;
+          }
+        }
+      }
+    });
+  }
+
+  // Add active game data
+  for (const [p, d] of Object.entries(activeGame.boxScore)) {
+    if (!displayStats[p]) displayStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
+    displayStats[p].W += d.W;
+    displayStats[p].E += d.E;
+    displayStats[p].POP += d.POP;
+    if (d.shots) {
+      for (const [shot, count] of Object.entries(d.shots)) {
+        displayStats[p].shots[shot] = (displayStats[p].shots[shot] || 0) + count;
+      }
+    }
+  }
+
+  for (const [name, s] of Object.entries(displayStats)) {
     const diff = s.W - s.E - s.POP;
     const diffClass = diff > 0 ? "diff-pos" : diff < 0 ? "diff-neg" : "";
 
     let topShot = "—";
     let maxCount = 0;
-    for (const [shot, count] of Object.entries(s.shots)) {
+    for (const [shot, count] of Object.entries(s.shots || {})) {
       if (count > maxCount) {
         maxCount = count;
         topShot = `${shot} (${count})`;
@@ -2626,11 +2848,11 @@ function renderLiveBoxScore() {
       <td style="font-size:0.75rem; color:var(--text-muted);">${topShot}</td>
     `;
     tbody.appendChild(tr);
-  });
+  }
 }
 
 /* =========================================================
-   Post-Match Summary, Point Rally Log & Dual Export
+   MATCH REPORT, ANALYSIS & POINT RALLY LOG ENGINE
    ========================================================= */
 
 let summaryViewFilter = "AGGREGATE";
@@ -2648,7 +2870,7 @@ function renderSummaryStats(filter) {
 
   const allPlayers = Object.keys(activeGame.boxScore);
   const combinedStats = {};
-  allPlayers.forEach(p => { combinedStats[p] = { W: 0, E: 0, POP: 0 }; });
+  allPlayers.forEach(p => { combinedStats[p] = { W: 0, E: 0, POP: 0, shots: {} }; });
 
   const gamesToTally = [];
   const ralliesToDisplay = [];
@@ -2675,35 +2897,53 @@ function renderSummaryStats(filter) {
     }
   }
 
-  // Tally Box Score
+  // Tally Cumulative Player Box Score
   gamesToTally.forEach(bs => {
     for (const [pName, data] of Object.entries(bs)) {
-      if (combinedStats[pName]) {
-        combinedStats[pName].W += data.W;
-        combinedStats[pName].E += data.E;
-        combinedStats[pName].POP += data.POP;
+      if (!combinedStats[pName]) combinedStats[pName] = { W: 0, E: 0, POP: 0, shots: {} };
+      combinedStats[pName].W += data.W;
+      combinedStats[pName].E += data.E;
+      combinedStats[pName].POP += data.POP;
+      if (data.shots) {
+        for (const [shot, count] of Object.entries(data.shots)) {
+          combinedStats[pName].shots[shot] = (combinedStats[pName].shots[shot] || 0) + count;
+        }
       }
     }
   });
 
-  const tbody = document.getElementById("summaryTableBody");
-  tbody.innerHTML = "";
-  for (const [pName, s] of Object.entries(combinedStats)) {
-    const diff = s.W - s.E - s.POP;
-    const diffClass = diff > 0 ? "diff-pos" : diff < 0 ? "diff-neg" : "";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="player-col">${pName}</td>
-      <td style="color:var(--accent-green); font-weight:700;">${s.W}</td>
-      <td style="color:var(--accent-rose); font-weight:700;">${s.E}</td>
-      <td style="color:var(--accent-amber); font-weight:700;">${s.POP}</td>
-      <td class="${diffClass}">${diff > 0 ? '+' + diff : diff}</td>
-    `;
-    tbody.appendChild(tr);
+  // Render Section 1: Match Summary & Results Box
+  const isDoubles = (matchSeries.playerMode === "DOUBLES");
+  const t1Name = isDoubles ? `Team 1 (${matchSeries.players.p1} & ${matchSeries.players.p2})` : `Team 1 (${matchSeries.players.p1})`;
+  const t2Name = isDoubles ? `Team 2 (${matchSeries.players.p3} & ${matchSeries.players.p4})` : `Team 2 (${matchSeries.players.p3})`;
+
+  let gameScoresHtml = "";
+  if (matchSeries.completedGames.length > 0) {
+    matchSeries.completedGames.forEach(g => {
+      gameScoresHtml += `<span style="background:#1e293b; border:1px solid #475569; padding:2px 8px; border-radius:4px; margin-right:6px; font-weight:700;">Game ${g.gameNumber}: ${g.score1}-${g.score2} (T${g.winner} W)</span>`;
+    });
+  }
+  const isAlreadyArchived = matchSeries.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
+  if (!isAlreadyArchived && activeGame) {
+    gameScoresHtml += `<span style="background:#1e293b; border:1px solid #38bdf8; color:#38bdf8; padding:2px 8px; border-radius:4px; font-weight:700;">Game ${activeGame.gameNumber}: ${activeGame.score1}-${activeGame.score2} (Live)</span>`;
   }
 
-  // Tally Team Summary Snapshot
-  const isDoubles = (matchSeries.playerMode === "DOUBLES");
+  const seriesTally = (matchSeries.format === 'BEST_OF_3') 
+    ? `Team 1: <strong>${matchSeries.seriesScore.team1}</strong> — Team 2: <strong>${matchSeries.seriesScore.team2}</strong>` 
+    : `Single Game (${activeGame.score1} - ${activeGame.score2})`;
+
+  document.getElementById("summaryMatchReportBox").innerHTML = `
+    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:6px;">
+      <div><strong>${t1Name}</strong> <span style="color:var(--text-muted);">vs</span> <strong>${t2Name}</strong></div>
+      <div>Series Score: ${seriesTally}</div>
+    </div>
+    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+      <span style="color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; font-weight:700;">Games:</span>
+      ${gameScoresHtml}
+    </div>
+  `;
+
+  // Render Section 2: Team Performance Analysis
   const t1Players = isDoubles ? [matchSeries.players.p1, matchSeries.players.p2] : [matchSeries.players.p1];
   const t2Players = isDoubles ? [matchSeries.players.p3, matchSeries.players.p4] : [matchSeries.players.p3];
 
@@ -2721,22 +2961,57 @@ function renderSummaryStats(filter) {
     t2POP += combinedStats[p]?.POP || 0;
   });
 
+  const t1Net = t1W - t1E - t1POP;
+  const t2Net = t2W - t2E - t2POP;
+
   document.getElementById("summaryTeamSnapshot").innerHTML = `
-    <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid #334155;">
-      <div style="font-weight:800; font-size:0.9rem; color:var(--accent-blue); margin-bottom:4px;">Team 1 Totals</div>
-      <div style="font-size:0.8rem;">Direct Winners: <strong style="color:var(--accent-green);">${t1W}</strong></div>
-      <div style="font-size:0.8rem;">Unforced Errors: <strong style="color:var(--accent-rose);">${t1E}</strong></div>
-      <div style="font-size:0.8rem;">Pop-ups Conceded: <strong style="color:var(--accent-amber);">${t1POP}</strong></div>
+    <div style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155;">
+      <div style="font-weight:800; font-size:0.92rem; color:var(--accent-blue); margin-bottom:6px;">Team 1 Performance</div>
+      <div style="font-size:0.82rem;">Direct Winners: <strong style="color:var(--accent-green);">${t1W}</strong></div>
+      <div style="font-size:0.82rem;">Unforced Errors: <strong style="color:var(--accent-rose);">${t1E}</strong></div>
+      <div style="font-size:0.82rem;">Pop-ups Conceded: <strong style="color:var(--accent-amber);">${t1POP}</strong></div>
+      <div style="font-size:0.82rem; margin-top:4px; font-weight:700;">Net Differential: <span class="${t1Net >= 0 ? 'diff-pos' : 'diff-neg'}">${t1Net > 0 ? '+' + t1Net : t1Net}</span></div>
     </div>
-    <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid #334155;">
-      <div style="font-weight:800; font-size:0.9rem; color:var(--accent-amber); margin-bottom:4px;">Team 2 Totals</div>
-      <div style="font-size:0.8rem;">Direct Winners: <strong style="color:var(--accent-green);">${t2W}</strong></div>
-      <div style="font-size:0.8rem;">Unforced Errors: <strong style="color:var(--accent-rose);">${t2E}</strong></div>
-      <div style="font-size:0.8rem;">Pop-ups Conceded: <strong style="color:var(--accent-amber);">${t2POP}</strong></div>
+    <div style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155;">
+      <div style="font-weight:800; font-size:0.92rem; color:var(--accent-amber); margin-bottom:6px;">Team 2 Performance</div>
+      <div style="font-size:0.82rem;">Direct Winners: <strong style="color:var(--accent-green);">${t2W}</strong></div>
+      <div style="font-size:0.82rem;">Unforced Errors: <strong style="color:var(--accent-rose);">${t2E}</strong></div>
+      <div style="font-size:0.82rem;">Pop-ups Conceded: <strong style="color:var(--accent-amber);">${t2POP}</strong></div>
+      <div style="font-size:0.82rem; margin-top:4px; font-weight:700;">Net Differential: <span class="${t2Net >= 0 ? 'diff-pos' : 'diff-neg'}">${t2Net > 0 ? '+' + t2Net : t2Net}</span></div>
     </div>
   `;
 
-  // Render Point-by-Point Rally Table
+  // Render Section 3: Player Box Score Table
+  const tbody = document.getElementById("summaryTableBody");
+  tbody.innerHTML = "";
+  for (const [pName, s] of Object.entries(combinedStats)) {
+    const diff = s.W - s.E - s.POP;
+    const diffClass = diff > 0 ? "diff-pos" : diff < 0 ? "diff-neg" : "";
+
+    let topWeapon = "—";
+    let maxCount = 0;
+    if (s.shots) {
+      for (const [shot, count] of Object.entries(s.shots)) {
+        if (count > maxCount) {
+          maxCount = count;
+          topWeapon = `${shot} (${count})`;
+        }
+      }
+    }
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="player-col">${pName}</td>
+      <td style="color:var(--accent-green); font-weight:700;">${s.W}</td>
+      <td style="color:var(--accent-rose); font-weight:700;">${s.E}</td>
+      <td style="color:var(--accent-amber); font-weight:700;">${s.POP}</td>
+      <td class="${diffClass}">${diff > 0 ? '+' + diff : diff}</td>
+      <td style="font-size:0.75rem; color:var(--text-muted);">${topWeapon}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // Render Section 4: Point-by-Point Rally Log Table
   const rTbody = document.getElementById("summaryRallyTableBody");
   rTbody.innerHTML = "";
   document.getElementById("summaryRallyCountBadge").innerText = `${ralliesToDisplay.length} Rallies Logged`;
@@ -2775,48 +3050,138 @@ function renderSummaryStats(filter) {
       rTbody.appendChild(tr);
     });
   }
+
+  // Populate Print Header Fields
+  const printGen = document.getElementById("printGeneratedDate");
+  if (printGen) printGen.innerText = `Date: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+  
+  const printFmt = document.getElementById("printMetaFormat");
+  if (printFmt) printFmt.innerText = `${matchSeries.playerMode} (${matchSeries.engine === 'RALLY' ? 'Rally' : 'Side-Out'})`;
+
+  const printEng = document.getElementById("printMetaEngine");
+  if (printEng) printEng.innerText = (matchSeries.engine === 'RALLY') ? 'Rally Scoring' : 'Side-Out Scoring';
+
+  const printTgt = document.getElementById("printMetaTarget");
+  if (printTgt) printTgt.innerText = `${matchSeries.targetScore} Pts (${matchSeries.winCond === 'WIN_BY_2' ? 'Win by 2' : 'Sudden Death'})`;
+
+  const printDur = document.getElementById("printMetaDuration");
+  if (printDur) printDur.innerText = document.getElementById("matchStopwatch").innerText.replace("⏱️ ", "").replace("⏱ ", "");
+
+  const printRes = document.getElementById("printMetaResult");
+  if (printRes) {
+    printRes.innerText = (matchSeries.format === 'BEST_OF_3') 
+      ? `Series ${matchSeries.seriesScore.team1} - ${matchSeries.seriesScore.team2}` 
+      : `${activeGame.score1} - ${activeGame.score2}`;
+  }
+}
+
+function printScoresheetPDF() {
+  renderSummaryStats("AGGREGATE");
+  setTimeout(() => {
+    window.print();
+  }, 100);
 }
 
 function exportToCSV() {
   let csv = "\uFEFF";
-  csv += "PICKLEPOINT MATCH REPORT\n";
+  csv += "PICKLEPOINT MATCH REPORT & ANALYTICS\n";
   csv += `Date,${new Date().toLocaleDateString()}\n`;
-  csv += `Match Duration,${document.getElementById("matchStopwatch").innerText.replace("⏱️ ", "")}\n`;
+  csv += `Match Duration,${document.getElementById("matchStopwatch").innerText.replace("⏱️ ", "").replace("⏱ ", "")}\n`;
   csv += `Format,${matchSeries.format} (${matchSeries.playerMode})\n`;
+  csv += `Scoring Engine,${matchSeries.engine === 'RALLY' ? 'Rally Scoring' : 'Side-Out Scoring'}\n`;
   csv += `Series Score,Team 1: ${matchSeries.seriesScore.team1} - Team 2: ${matchSeries.seriesScore.team2}\n\n`;
 
-  csv += "GAME BREAKDOWN\n";
+  // 1. Match Summary (Game Breakdown)
+  csv += "1. MATCH SUMMARY (GAME BREAKDOWN)\n";
   csv += "Game #,Winner,Final Score\n";
   matchSeries.completedGames.forEach(g => {
     csv += `Game ${g.gameNumber},Team ${g.winner},${g.score1} - ${g.score2}\n`;
   });
-
   const isAlreadyArchived = matchSeries.completedGames.some(g => g.gameNumber === activeGame.gameNumber);
   if (!isAlreadyArchived && !activeGame.isFinished && activeGame) {
     csv += `Game ${activeGame.gameNumber} (In Progress),-,${activeGame.score1} - ${activeGame.score2}\n`;
   }
   csv += "\n";
 
-  // Box Score Export
-  csv += "PLAYER BOX SCORE (MATCH AGGREGATE)\n";
-  csv += "Player,Winners,Errors,Pop-ups Conceded,Differential (+/-)\n";
-
+  // 2. Team Comparative Analysis
+  csv += "2. TEAM PERFORMANCE ANALYSIS\n";
+  csv += "Team,Winners,Errors,Pop-ups Conceded,Net Differential\n";
+  
+  const isDoubles = (matchSeries.playerMode === "DOUBLES");
   const allPlayers = Object.keys(activeGame.boxScore);
-  allPlayers.forEach(p => {
-    let w = 0, e = 0, pop = 0;
-    matchSeries.completedGames.forEach(g => {
-      if (g.boxScore[p]) { w += g.boxScore[p].W; e += g.boxScore[p].E; pop += g.boxScore[p].POP; }
-    });
+  const combinedStats = {};
+  allPlayers.forEach(p => { combinedStats[p] = { W: 0, E: 0, POP: 0, shots: {} }; });
 
-    if (!isAlreadyArchived && !activeGame.isFinished && activeGame.boxScore[p]) {
-      w += activeGame.boxScore[p].W; e += activeGame.boxScore[p].E; pop += activeGame.boxScore[p].POP;
+  matchSeries.completedGames.forEach(g => {
+    for (const [p, d] of Object.entries(g.boxScore)) {
+      if (!combinedStats[p]) combinedStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
+      combinedStats[p].W += d.W;
+      combinedStats[p].E += d.E;
+      combinedStats[p].POP += d.POP;
+      if (d.shots) {
+        for (const [s, c] of Object.entries(d.shots)) {
+          combinedStats[p].shots[s] = (combinedStats[p].shots[s] || 0) + c;
+        }
+      }
     }
-    csv += `"${p}",${w},${e},${pop},${w - e - pop}\n`;
+  });
+
+  if (!isAlreadyArchived && !activeGame.isFinished && activeGame) {
+    for (const [p, d] of Object.entries(activeGame.boxScore)) {
+      if (!combinedStats[p]) combinedStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
+      combinedStats[p].W += d.W;
+      combinedStats[p].E += d.E;
+      combinedStats[p].POP += d.POP;
+      if (d.shots) {
+        for (const [s, c] of Object.entries(d.shots)) {
+          combinedStats[p].shots[s] = (combinedStats[p].shots[s] || 0) + c;
+        }
+      }
+    }
+  }
+
+  const t1Players = isDoubles ? [matchSeries.players.p1, matchSeries.players.p2] : [matchSeries.players.p1];
+  const t2Players = isDoubles ? [matchSeries.players.p3, matchSeries.players.p4] : [matchSeries.players.p3];
+
+  let t1W = 0, t1E = 0, t1POP = 0;
+  t1Players.forEach(p => {
+    t1W += combinedStats[p]?.W || 0;
+    t1E += combinedStats[p]?.E || 0;
+    t1POP += combinedStats[p]?.POP || 0;
+  });
+
+  let t2W = 0, t2E = 0, t2POP = 0;
+  t2Players.forEach(p => {
+    t2W += combinedStats[p]?.W || 0;
+    t2E += combinedStats[p]?.E || 0;
+    t2POP += combinedStats[p]?.POP || 0;
+  });
+
+  csv += `Team 1,${t1W},${t1E},${t1POP},${t1W - t1E - t1POP}\n`;
+  csv += `Team 2,${t2W},${t2E},${t2POP},${t2W - t2E - t2POP}\n\n`;
+
+  // 3. Player Performance Box Score
+  csv += "3. PLAYER PERFORMANCE BOX SCORE\n";
+  csv += "Player,Winners,Errors,Pop-ups Conceded,Differential (+/-),Top Weapon\n";
+
+  allPlayers.forEach(p => {
+    const s = combinedStats[p];
+    let topWeapon = "-";
+    let maxCount = 0;
+    if (s.shots) {
+      for (const [shot, count] of Object.entries(s.shots)) {
+        if (count > maxCount) {
+          maxCount = count;
+          topWeapon = `${shot} (${count})`;
+        }
+      }
+    }
+    csv += `"${p}",${s.W},${s.E},${s.POP},${s.W - s.E - s.POP},"${topWeapon}"\n`;
   });
   csv += "\n";
 
-  // Point-by-Point Rally Log Export
-  csv += "POINT-BY-POINT RALLY LOG\n";
+  // 4. Complete Point-by-Point Rally Log
+  csv += "4. POINT-BY-POINT RALLY LOG\n";
   csv += "Rally #,Game #,Score Call,Server,Point Awarded To,Deciding Player,Outcome / Shot Details,Setup Conceded By\n";
 
   const allRallies = [];
@@ -2844,7 +3209,7 @@ function exportToCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `PicklePoint_Match_${Date.now()}.csv`;
+  a.download = `PicklePoint_Report_${Date.now()}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -2883,18 +3248,8 @@ function applySettings() {
   matchSeries.players.p3 = document.getElementById("cfgP3").value || "Player C";
   matchSeries.players.p4 = (matchSeries.playerMode === "DOUBLES") ? (document.getElementById("cfgP4").value || "Player D") : null;
 
-  document.getElementById("t1DisplayName").innerText = "Team 1";
-  document.getElementById("t1Roster").innerText = (matchSeries.playerMode === "DOUBLES")
-    ? `${matchSeries.players.p1} & ${matchSeries.players.p2}`
-    : matchSeries.players.p1;
-
-  document.getElementById("t2DisplayName").innerText = "Team 2";
-  document.getElementById("t2Roster").innerText = (matchSeries.playerMode === "DOUBLES")
-    ? `${matchSeries.players.p3} & ${matchSeries.players.p4}`
-    : matchSeries.players.p3;
-
   closeModal("settingsModal");
-  handleFullMatchReset();
+  startMatch();
 }
 </script>
 </body>
