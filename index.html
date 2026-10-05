@@ -583,7 +583,7 @@
       font-weight: 700;
     }
 
-    /* Modals */
+    /* Modals Base */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -772,7 +772,7 @@
     }
 
     /* =========================================================
-       PRINT & PDF STYLESHEET (Full Flowing A4 / Letter)
+       CLEAN PRINT STYLESHEET (STRICTLY ONLY SUMMARY MODAL)
        ========================================================= */
     @page {
       size: A4 portrait;
@@ -787,18 +787,32 @@
         font-size: 9pt !important;
       }
 
+      /* 1. Hide the entire web interface */
       .no-print, header, .controls-grid, .action-row, .court-card, .quick-pref-bar, .series-bar, .scoreboard, .stats-card {
         display: none !important;
       }
 
-      .modal-overlay {
+      /* 2. STRICTLY HIDE all interactive live-play modals from print */
+      .modal-overlay,
+      #challengeModal,
+      #attrModal,
+      #warmupModal,
+      #endGameModal,
+      #switchEndsModal,
+      #matchOverModal,
+      #settingsModal {
+        display: none !important;
+      }
+
+      /* 3. ONLY display the Summary & Analysis Report */
+      #summaryModal.modal-overlay {
         position: static !important;
         background: transparent !important;
         display: block !important;
         padding: 0 !important;
       }
 
-      .modal-content {
+      #summaryModal .modal-content {
         max-width: 100% !important;
         max-height: none !important;
         overflow: visible !important;
@@ -1048,7 +1062,7 @@
     </button>
   </div>
 
-  <!-- Action Row: Fault, Review, Undo, Redo -->
+  <!-- Action Row -->
   <div class="action-row">
     <button class="fault-btn" onclick="handleFaultClick()">⚠️ FAULT</button>
     <button class="challenge-action-btn" onclick="openChallengeModal()">🚩 REVIEW</button>
@@ -1112,7 +1126,7 @@
       <div class="chip-group" id="challengeTypeGroup">
         <button class="tag-chip active-win" onclick="selectChallengeType(this, 'Line Call (In / Out)')">🎾 Line Call (In / Out)</button>
         <button class="tag-chip" onclick="selectChallengeType(this, 'Kitchen / NVZ Fault')">🚫 Kitchen / NVZ Violation</button>
-        <button class="tag-chip" onclick="selectChallengeType(this, 'Net Touch / Body Contact')">🕸️️ Net Touch / Body Contact</button>
+        <button class="tag-chip" onclick="selectChallengeType(this, 'Net Touch / Body Contact')">🕸 Net Touch / Body Contact</button>
         <button class="tag-chip" onclick="selectChallengeType(this, 'Service Foot Fault')">👟 Service Foot Fault</button>
         <button class="tag-chip" onclick="selectChallengeType(this, 'Double Bounce / Carry')">⚡ Double Bounce / Carry</button>
       </div>
@@ -1282,7 +1296,7 @@
 <div class="modal-overlay" id="summaryModal">
   <div class="modal-content">
     
-    <!-- Printable Header (Active on PDF Print) -->
+    <!-- Printable Header (Active ONLY on PDF Print) -->
     <div class="print-only-header">
       <div class="print-header-row">
         <div>
@@ -1536,7 +1550,7 @@ let activeGame = null;
 let undoStack = [];
 let redoStack = [];
 let pendingRallyOutcome = null;
-let liveBoxScope = "MATCH"; // 'MATCH' or 'GAME'
+let liveBoxScope = "MATCH";
 
 let breakIntervalId = null;
 let warmupIntervalId = null;
@@ -1833,7 +1847,7 @@ function updateChallengeModalUI() {
 
   if (currentChallengerLeft === 0) {
     warnBanner.style.display = "block";
-    warnBanner.innerHTML = `⚠️️ <strong>ZERO CHALLENGES REMAINING:</strong> Team ${selectedChallengingTeam} has no free challenges. If UPHELD, <strong>+1 TECHNICAL PENALTY POINT</strong> will be awarded to Team ${opponentTeamNum}!`;
+    warnBanner.innerHTML = `⚠️ <strong>ZERO CHALLENGES REMAINING:</strong> Team ${selectedChallengingTeam} has no free challenges. If UPHELD, <strong>+1 TECHNICAL PENALTY POINT</strong> will be awarded to Team ${opponentTeamNum}!`;
     subUpheld.innerHTML = `Call Stands<br>+1 Pt to Team ${opponentTeamNum}`;
   } else {
     warnBanner.style.display = "none";
@@ -2040,7 +2054,7 @@ function getActiveReceiverName() {
 }
 
 function executeRallyResolution(winningTeam, attr) {
-  // 1. Snapshot state prior to executing point
+  // Snapshot state prior to executing point
   saveStateSnapshot();
 
   if (!matchTimerRunning && matchTimerSeconds === 0) {
@@ -2050,7 +2064,7 @@ function executeRallyResolution(winningTeam, attr) {
   const isServingTeamWin = (winningTeam === activeGame.servingTeam);
   const currentServingPlayer = activeGame.activeServerName;
 
-  // 2. Intelligent Default Attribution if quick-awarded or skipped
+  // Default attribution for quick awards or skipped prompts
   if (!attr) {
     const defaultScorer = (winningTeam === activeGame.servingTeam)
       ? currentServingPlayer
@@ -2065,7 +2079,7 @@ function executeRallyResolution(winningTeam, attr) {
     };
   }
 
-  // 3. Update Box Score
+  // Update Box Score metrics
   if (attr && attr.primaryPlayer) {
     let pStats = activeGame.boxScore[attr.primaryPlayer];
     if (!pStats) {
@@ -2101,7 +2115,7 @@ function executeRallyResolution(winningTeam, attr) {
     }
   }
 
-  // 4. Run rules engine
+  // Scoring engine execution
   if (matchSeries.engine === "RALLY") {
     executeRallyEngine(winningTeam, isServingTeamWin);
   } else {
@@ -2344,518 +2358,8 @@ function resetWholeMatch() {
 }
 
 /* =========================================================
-   SMART ATTRIBUTION SYSTEM
-   ========================================================= */
-
-let currentRallyWinningTeam = 1;
-let currentRallyLosingTeam = 2;
-let selectedAttrPlayer = null;
-let selectedAttrRole = "WINNER";
-let selectedAttrShotLabel = null;
-let selectedAttrShotType = "WINNER";
-let selectedLinkedOpponent = null;
-
-function openSmartAttributionModal(winningTeam) {
-  currentRallyWinningTeam = winningTeam;
-  currentRallyLosingTeam = (winningTeam === 1) ? 2 : 1;
-  selectedAttrShotLabel = null;
-  selectedLinkedOpponent = null;
-  document.getElementById("attrDualCheckbox").checked = false;
-  document.getElementById("attrDualOpponentSection").style.display = "none";
-
-  document.getElementById("attrBannerText").innerText = `Point awarded to Team ${winningTeam}`;
-  document.getElementById("attrWinGroupName").innerText = `Team ${winningTeam} (Scored)`;
-  document.getElementById("attrLoseGroupName").innerText = `Team ${currentRallyLosingTeam} (Conceded)`;
-
-  const winP1 = (winningTeam === 1) ? matchSeries.players.p1 : matchSeries.players.p3;
-  if (activeGame.servingTeam === winningTeam) {
-    selectedAttrPlayer = activeGame.activeServerName;
-  } else {
-    selectedAttrPlayer = winP1;
-  }
-  selectedAttrRole = "WINNER";
-
-  renderPlayerSelectionButtons();
-  renderReasonSection();
-  openModal("attrModal");
-}
-
-function renderPlayerSelectionButtons() {
-  const isDoubles = (matchSeries.playerMode === "DOUBLES");
-  const winList = document.getElementById("attrWinPlayersList");
-  const loseList = document.getElementById("attrLosePlayersList");
-  winList.innerHTML = "";
-  loseList.innerHTML = "";
-
-  const winPlayers = (currentRallyWinningTeam === 1)
-    ? (isDoubles ? [matchSeries.players.p1, matchSeries.players.p2] : [matchSeries.players.p1])
-    : (isDoubles ? [matchSeries.players.p3, matchSeries.players.p4] : [matchSeries.players.p3]);
-
-  const losePlayers = (currentRallyLosingTeam === 1)
-    ? (isDoubles ? [matchSeries.players.p1, matchSeries.players.p2] : [matchSeries.players.p1])
-    : (isDoubles ? [matchSeries.players.p3, matchSeries.players.p4] : [matchSeries.players.p3]);
-
-  winPlayers.forEach(p => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    const isSelected = (selectedAttrPlayer === p && selectedAttrRole === "WINNER");
-    btn.className = `attr-player-btn ${isSelected ? 'active-winner' : ''}`;
-    const serverTag = (p === activeGame.activeServerName) ? "⚡ Server" : "";
-    btn.innerHTML = `<span>${p}</span><span style="font-size:0.68rem; opacity:0.8;">${serverTag}</span>`;
-    btn.onclick = () => {
-      selectedAttrPlayer = p;
-      selectedAttrRole = "WINNER";
-      renderPlayerSelectionButtons();
-      renderReasonSection();
-    };
-    winList.appendChild(btn);
-  });
-
-  losePlayers.forEach(p => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    const isSelected = (selectedAttrPlayer === p && selectedAttrRole === "LOSER");
-    btn.className = `attr-player-btn ${isSelected ? 'active-loser' : ''}`;
-    const serverTag = (p === activeGame.activeServerName) ? "⚡ Server" : "";
-    btn.innerHTML = `<span>${p}</span><span style="font-size:0.68rem; opacity:0.8;">${serverTag}</span>`;
-    btn.onclick = () => {
-      selectedAttrPlayer = p;
-      selectedAttrRole = "LOSER";
-      renderPlayerSelectionButtons();
-      renderReasonSection();
-    };
-    loseList.appendChild(btn);
-  });
-}
-
-function renderReasonSection() {
-  const reasonHeader = document.getElementById("attrReasonHeader");
-  const roleBadge = document.getElementById("attrSelectedRoleBadge");
-  const chipsContainer = document.getElementById("attrReasonChips");
-  chipsContainer.innerHTML = "";
-  selectedAttrShotLabel = null;
-
-  if (selectedAttrRole === "WINNER") {
-    reasonHeader.innerText = `Step 2: How did ${selectedAttrPlayer} WIN the point?`;
-    roleBadge.innerText = "WINNER / FINISH (+)";
-    roleBadge.style.color = "var(--accent-green)";
-
-    WINNER_SHOTS.forEach((shot, index) => {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "tag-chip";
-      chip.innerText = shot;
-      if (index === 0) {
-        chip.classList.add("active-win");
-        selectedAttrShotLabel = shot;
-        selectedAttrShotType = "WINNER";
-      }
-      chip.onclick = () => {
-        Array.from(chipsContainer.children).forEach(c => c.classList.remove("active-win"));
-        chip.classList.add("active-win");
-        selectedAttrShotLabel = shot;
-        selectedAttrShotType = "WINNER";
-      };
-      chipsContainer.appendChild(chip);
-    });
-
-    document.getElementById("attrDualCheckboxLabel").innerText = "Gilded by opponent pop-up / meatball setup?";
-    document.getElementById("attrDualOpponentPrompt").innerText = `Who floated the easy setup to ${selectedAttrPlayer}?`;
-
-  } else {
-    reasonHeader.innerText = `Step 2: Why did ${selectedAttrPlayer} LOSE the point?`;
-    roleBadge.innerText = "MISTAKE / ERROR (-)";
-    roleBadge.style.color = "var(--accent-rose)";
-
-    LOSING_REASONS.forEach((reason, index) => {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "tag-chip";
-      chip.innerText = reason.label;
-      if (index === 0) {
-        chip.classList.add("active-loss");
-        selectedAttrShotLabel = reason.label;
-        selectedAttrShotType = reason.type;
-      }
-      chip.onclick = () => {
-        Array.from(chipsContainer.children).forEach(c => c.classList.remove("active-loss"));
-        chip.classList.add("active-loss");
-        selectedAttrShotLabel = reason.label;
-        selectedAttrShotType = reason.type;
-      };
-      chipsContainer.appendChild(chip);
-    });
-
-    document.getElementById("attrDualCheckboxLabel").innerText = "Punished / put-away by opponent smash?";
-    document.getElementById("attrDualOpponentPrompt").innerText = "Which opponent smashed or finished the point?";
-  }
-
-  if (document.getElementById("attrDualCheckbox").checked) {
-    renderDualOpponentsList();
-  }
-}
-
-function toggleDualOpponentSection(checked) {
-  const section = document.getElementById("attrDualOpponentSection");
-  section.style.display = checked ? "block" : "none";
-  if (checked) {
-    renderDualOpponentsList();
-  } else {
-    selectedLinkedOpponent = null;
-  }
-}
-
-function renderDualOpponentsList() {
-  const container = document.getElementById("attrDualOpponentsGroup");
-  container.innerHTML = "";
-  const isDoubles = (matchSeries.playerMode === "DOUBLES");
-
-  const targetOpponents = (selectedAttrRole === "WINNER")
-    ? (currentRallyLosingTeam === 1
-        ? (isDoubles ? [matchSeries.players.p1, matchSeries.players.p2] : [matchSeries.players.p1])
-        : (isDoubles ? [matchSeries.players.p3, matchSeries.players.p4] : [matchSeries.players.p3]))
-    : (currentRallyWinningTeam === 1
-        ? (isDoubles ? [matchSeries.players.p1, matchSeries.players.p2] : [matchSeries.players.p1])
-        : (isDoubles ? [matchSeries.players.p3, matchSeries.players.p4] : [matchSeries.players.p3]));
-
-  const validOpponents = targetOpponents.filter(Boolean);
-
-  if (!selectedLinkedOpponent && validOpponents.length > 0) {
-    selectedLinkedOpponent = validOpponents[0];
-  }
-
-  validOpponents.forEach(opp => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    const isSelected = (selectedLinkedOpponent === opp);
-    btn.className = `tag-chip ${isSelected ? 'active-pop' : ''}`;
-    btn.innerText = opp;
-    btn.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      selectedLinkedOpponent = opp;
-      Array.from(container.children).forEach(c => c.classList.remove("active-pop"));
-      btn.classList.add("active-pop");
-    };
-    container.appendChild(btn);
-  });
-}
-
-function confirmAttribution() {
-  closeModal("attrModal");
-  const isDualChecked = document.getElementById("attrDualCheckbox").checked;
-  const attrData = {
-    primaryPlayer: selectedAttrPlayer,
-    role: selectedAttrRole,
-    shotLabel: selectedAttrShotLabel,
-    shotType: selectedAttrShotType,
-    linkedPlayer: isDualChecked ? selectedLinkedOpponent : null
-  };
-  executeRallyResolution(pendingRallyOutcome.winningTeam, attrData);
-}
-
-function bypassAttribution() {
-  closeModal("attrModal");
-  executeRallyResolution(pendingRallyOutcome.winningTeam, null);
-}
-
-/* =========================================================
-   UI & Court Display
-   ========================================================= */
-
-function setLiveBoxScope(scope) {
-  liveBoxScope = scope;
-  document.getElementById("btnScopeMatch").className = `btn-sm ${scope === 'MATCH' ? 'btn-accent' : ''}`;
-  document.getElementById("btnScopeGame").className = `btn-sm ${scope === 'GAME' ? 'btn-accent' : ''}`;
-  renderLiveBoxScore();
-}
-
-function updateUI() {
-  const isBestOf3 = (matchSeries.format === "BEST_OF_3");
-  document.getElementById("seriesPillsRow").style.display = isBestOf3 ? "flex" : "none";
-  document.getElementById("seriesModeLabel").innerText = isBestOf3
-    ? `🏆 Best 2 of 3 Games • First to 2`
-    : `Single Game Match`;
-
-  document.getElementById("sTeam1Games").innerText = matchSeries.seriesScore.team1;
-  document.getElementById("sTeam2Games").innerText = matchSeries.seriesScore.team2;
-  document.getElementById("pillG1").className = getPillClass(1);
-  document.getElementById("pillG2").className = getPillClass(2);
-  document.getElementById("pillG3").className = getPillClass(3);
-  document.getElementById("pillG1").innerText = getPillText(1);
-  document.getElementById("pillG2").innerText = getPillText(2);
-  document.getElementById("pillG3").innerText = getPillText(3);
-
-  document.getElementById("t1Score").innerText = activeGame.score1;
-  document.getElementById("t2Score").innerText = activeGame.score2;
-  document.getElementById("calloutDisplay").innerText = getScoreCallout();
-  document.getElementById("activeServerCallout").innerText = `Server: ${activeGame.activeServerName}`;
-
-  // Roster sync
-  const isDoubles = (matchSeries.playerMode === "DOUBLES");
-  document.getElementById("t1DisplayName").innerText = "Team 1";
-  document.getElementById("t1Roster").innerText = isDoubles
-    ? `${matchSeries.players.p1} & ${matchSeries.players.p2}`
-    : matchSeries.players.p1;
-  document.getElementById("t2DisplayName").innerText = "Team 2";
-  document.getElementById("t2Roster").innerText = isDoubles
-    ? `${matchSeries.players.p3} & ${matchSeries.players.p4}`
-    : matchSeries.players.p3;
-
-  // Undo / Redo button states
-  const btnUndo = document.getElementById("btnUndo");
-  const btnRedo = document.getElementById("btnRedo");
-  if (btnUndo) {
-    const hasUndo = (undoStack.length > 0);
-    btnUndo.disabled = !hasUndo;
-    btnUndo.style.opacity = hasUndo ? "1" : "0.45";
-    btnUndo.style.cursor = hasUndo ? "pointer" : "not-allowed";
-  }
-  if (btnRedo) {
-    const hasRedo = (redoStack.length > 0);
-    btnRedo.disabled = !hasRedo;
-    btnRedo.style.opacity = hasRedo ? "1" : "0.45";
-    btnRedo.style.cursor = hasRedo ? "pointer" : "not-allowed";
-  }
-
-  // Challenge Badges
-  const chActive = (matchSeries.challengeMode !== "OFF");
-  const elB1 = document.getElementById("t1ChallengeBadge");
-  const elB2 = document.getElementById("t2ChallengeBadge");
-
-  elB1.style.display = chActive ? "inline-block" : "none";
-  elB2.style.display = chActive ? "inline-block" : "none";
-
-  const c1 = activeGame.challenges.team1;
-  const c2 = activeGame.challenges.team2;
-
-  elB1.innerText = `🚩 ${c1} Left`;
-  elB2.innerText = `🚩 ${c2} Left`;
-
-  elB1.className = `challenge-pill ${c1 === 0 ? 'empty' : ''}`;
-  elB2.className = `challenge-pill ${c2 === 0 ? 'empty' : ''}`;
-
-  const isT1Serving = (activeGame.servingTeam === 1);
-  document.getElementById("teamPanel1").classList.toggle("serving", isT1Serving);
-  document.getElementById("teamPanel2").classList.toggle("serving", !isT1Serving);
-  document.getElementById("t1ServingTag").className = isT1Serving ? "serving-indicator active" : "serving-indicator";
-  document.getElementById("t1ServingTag").innerText = isT1Serving ? "SERVING" : "RECEIVING";
-  document.getElementById("t2ServingTag").className = !isT1Serving ? "serving-indicator active" : "serving-indicator";
-  document.getElementById("t2ServingTag").innerText = !isT1Serving ? "SERVING" : "RECEIVING";
-
-  const isFreeze = (matchSeries.winCond === "SERVE_TO_WIN");
-  const target = matchSeries.targetScore;
-  const t1Frozen = isFreeze && activeGame.score1 >= target - 1;
-  const t2Frozen = isFreeze && activeGame.score2 >= target - 1;
-  document.getElementById("t1FrozenBadge").style.display = t1Frozen ? "block" : "none";
-  document.getElementById("t2FrozenBadge").style.display = t2Frozen ? "block" : "none";
-  document.getElementById("teamPanel1").classList.toggle("frozen", t1Frozen);
-  document.getElementById("teamPanel2").classList.toggle("frozen", t2Frozen);
-
-  const engName = matchSeries.engine === "RALLY" ? "Rally" : "Side-Out";
-  const winName = matchSeries.winCond === "WIN_BY_2" ? "Win by 2" : matchSeries.winCond === "SUDDEN_DEATH" ? "Sudden Death" : "Freeze";
-  const modeName = isDoubles ? "Doubles 2v2" : "Singles 1v1";
-  document.getElementById("rulePill").innerText = `${modeName} • ${engName} • Target ${target} • ${winName}`;
-  document.getElementById("courtModeIndicator").innerText = `${modeName} • Diagonal Trajectory`;
-  document.getElementById("game3EndsIndicator").style.display = matchSeries.game3SwappedEnds ? "inline" : "none";
-
-  renderCourt();
-  renderLiveBoxScore();
-}
-
-function getPillClass(num) {
-  if (matchSeries.currentGameIndex === num) return "game-tab active";
-  const found = matchSeries.completedGames.find(g => g.gameNumber === num);
-  if (found) return "game-tab finished";
-  return "game-tab";
-}
-
-function getPillText(num) {
-  const found = matchSeries.completedGames.find(g => g.gameNumber === num);
-  if (found) return `Game ${num}: ${found.score1}-${found.score2} ✓`;
-  if (matchSeries.currentGameIndex === num) return `Game ${num}: Live`;
-  return `Game ${num}: —`;
-}
-
-function getScoreCallout() {
-  if (matchSeries.playerMode === "SINGLES") {
-    const sScore = (activeGame.servingTeam === 1) ? activeGame.score1 : activeGame.score2;
-    const rScore = (activeGame.servingTeam === 1) ? activeGame.score2 : activeGame.score1;
-    return `${sScore} - ${rScore}`;
-  }
-  if (matchSeries.engine === "RALLY") {
-    const sScore = (activeGame.servingTeam === 1) ? activeGame.score1 : activeGame.score2;
-    const rScore = (activeGame.servingTeam === 1) ? activeGame.score2 : activeGame.score1;
-    return `${sScore} - ${rScore}`;
-  } else {
-    const sScore = (activeGame.servingTeam === 1) ? activeGame.score1 : activeGame.score2;
-    const rScore = (activeGame.servingTeam === 1) ? activeGame.score2 : activeGame.score1;
-    return `${sScore} - ${rScore} - ${activeGame.serverNumber}`;
-  }
-}
-
-function renderCourt() {
-  const isSingles = (matchSeries.playerMode === "SINGLES");
-  const leftTeamKey = activeGame.team1OnLeft ? "team1" : "team2";
-  const rightTeamKey = activeGame.team1OnLeft ? "team2" : "team1";
-
-  const leftTeamScore = activeGame.team1OnLeft ? activeGame.score1 : activeGame.score2;
-  const rightTeamScore = activeGame.team1OnLeft ? activeGame.score2 : activeGame.score1;
-
-  let leftTopPlayer, leftBottomPlayer, rightTopPlayer, rightBottomPlayer;
-
-  if (isSingles) {
-    const pLeft = activeGame.positions[leftTeamKey].right;
-    const pRight = activeGame.positions[rightTeamKey].right;
-    leftBottomPlayer = (leftTeamScore % 2 === 0) ? pLeft : "";
-    leftTopPlayer = (leftTeamScore % 2 === 1) ? pLeft : "";
-
-    rightTopPlayer = (rightTeamScore % 2 === 0) ? pRight : "";
-    rightBottomPlayer = (rightTeamScore % 2 === 1) ? pRight : "";
-  } else {
-    leftTopPlayer = activeGame.positions[leftTeamKey].left;
-    leftBottomPlayer = activeGame.positions[leftTeamKey].right;
-    rightTopPlayer = activeGame.positions[rightTeamKey].right;
-    rightBottomPlayer = activeGame.positions[rightTeamKey].left;
-  }
-
-  setChip("chipLeftTop", leftTopPlayer);
-  setChip("chipLeftBottom", leftBottomPlayer);
-  setChip("chipRightTop", rightTopPlayer);
-  setChip("chipRightBottom", rightBottomPlayer);
-
-  const server = activeGame.activeServerName;
-  highlightChip("chipLeftTop", leftTopPlayer === server, "is-server");
-  highlightChip("chipLeftBottom", leftBottomPlayer === server, "is-server");
-  highlightChip("chipRightTop", rightTopPlayer === server, "is-server");
-  highlightChip("chipRightBottom", rightBottomPlayer === server, "is-server");
-
-  let targetBoxId = null;
-  let receiverName = null;
-  let startX = 18, startY = 75, endX = 82, endY = 25;
-
-  if (leftBottomPlayer === server) {
-    targetBoxId = "boxRightTop";
-    receiverName = rightTopPlayer;
-    startX = 18; startY = 75; endX = 82; endY = 25;
-  } else if (leftTopPlayer === server) {
-    targetBoxId = "boxRightBottom";
-    receiverName = rightBottomPlayer;
-    startX = 18; startY = 25; endX = 82; endY = 75;
-  } else if (rightTopPlayer === server) {
-    targetBoxId = "boxLeftBottom";
-    receiverName = leftBottomPlayer;
-    startX = 82; startY = 25; endX = 18; endY = 75;
-  } else if (rightBottomPlayer === server) {
-    targetBoxId = "boxLeftTop";
-    receiverName = leftTopPlayer;
-    startX = 82; startY = 75; endX = 18; endY = 25;
-  }
-
-  ["boxLeftTop", "boxLeftBottom", "boxRightTop", "boxRightBottom"].forEach(id => {
-    document.getElementById(id).classList.remove("box-target-glow");
-  });
-  if (targetBoxId) {
-    document.getElementById(targetBoxId).classList.add("box-target-glow");
-  }
-
-  highlightChip("chipLeftTop", leftTopPlayer === receiverName, "is-receiver");
-  highlightChip("chipLeftBottom", leftBottomPlayer === receiverName, "is-receiver");
-  highlightChip("chipRightTop", rightTopPlayer === receiverName, "is-receiver");
-  highlightChip("chipRightBottom", rightBottomPlayer === receiverName, "is-receiver");
-
-  const svgLine = document.getElementById("trajectoryLine");
-  svgLine.setAttribute("x1", startX);
-  svgLine.setAttribute("y1", startY);
-  svgLine.setAttribute("x2", endX);
-  svgLine.setAttribute("y2", endY);
-}
-
-function setChip(id, name) {
-  const el = document.getElementById(id);
-  el.innerText = name || "—";
-  el.style.opacity = name ? "1" : "0.2";
-}
-
-function highlightChip(id, isActive, className) {
-  const el = document.getElementById(id);
-  if (isActive && el.innerText !== "—") el.classList.add(className);
-  else el.classList.remove(className);
-}
-
-function renderLiveBoxScore() {
-  const isMatchScope = (liveBoxScope === "MATCH");
-  document.getElementById("boxScoreHeaderTitle").innerText = isMatchScope
-    ? "Live Match Player Box Score"
-    : `Live Game ${activeGame.gameNumber} Box Score`;
-
-  const tbody = document.getElementById("boxScoreTbody");
-  tbody.innerHTML = "";
-
-  const allPlayers = Object.keys(activeGame.boxScore);
-  const displayStats = {};
-  allPlayers.forEach(p => { displayStats[p] = { W: 0, E: 0, POP: 0, shots: {} }; });
-
-  if (isMatchScope) {
-    matchSeries.completedGames.forEach(g => {
-      for (const [p, d] of Object.entries(g.boxScore)) {
-        if (!displayStats[p]) displayStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
-        displayStats[p].W += d.W;
-        displayStats[p].E += d.E;
-        displayStats[p].POP += d.POP;
-        if (d.shots) {
-          for (const [shot, count] of Object.entries(d.shots)) {
-            displayStats[p].shots[shot] = (displayStats[p].shots[shot] || 0) + count;
-          }
-        }
-      }
-    });
-  }
-
-  // Add active game data
-  for (const [p, d] of Object.entries(activeGame.boxScore)) {
-    if (!displayStats[p]) displayStats[p] = { W: 0, E: 0, POP: 0, shots: {} };
-    displayStats[p].W += d.W;
-    displayStats[p].E += d.E;
-    displayStats[p].POP += d.POP;
-    if (d.shots) {
-      for (const [shot, count] of Object.entries(d.shots)) {
-        displayStats[p].shots[shot] = (displayStats[p].shots[shot] || 0) + count;
-      }
-    }
-  }
-
-  for (const [name, s] of Object.entries(displayStats)) {
-    const diff = s.W - s.E - s.POP;
-    const diffClass = diff > 0 ? "diff-pos" : diff < 0 ? "diff-neg" : "";
-
-    let topShot = "—";
-    let maxCount = 0;
-    for (const [shot, count] of Object.entries(s.shots || {})) {
-      if (count > maxCount) {
-        maxCount = count;
-        topShot = `${shot} (${count})`;
-      }
-    }
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="player-col">${name}</td>
-      <td style="color:var(--accent-green); font-weight:700;">${s.W}</td>
-      <td style="color:var(--accent-rose); font-weight:700;">${s.E}</td>
-      <td style="color:var(--accent-amber); font-weight:700;">${s.POP}</td>
-      <td class="${diffClass}">${diff > 0 ? '+' + diff : diff}</td>
-      <td style="font-size:0.75rem; color:var(--text-muted);">${topShot}</td>
-    `;
-    tbody.appendChild(tr);
-  }
-}
-
-/* =========================================================
    MATCH REPORT, ANALYSIS & POINT RALLY LOG ENGINE
    ========================================================= */
-
-let summaryViewFilter = "AGGREGATE";
 
 function renderSummaryStats(filter) {
   summaryViewFilter = filter;
@@ -2897,7 +2401,7 @@ function renderSummaryStats(filter) {
     }
   }
 
-  // Tally Cumulative Player Box Score
+  // Cumulative Player Box Score Calculation
   gamesToTally.forEach(bs => {
     for (const [pName, data] of Object.entries(bs)) {
       if (!combinedStats[pName]) combinedStats[pName] = { W: 0, E: 0, POP: 0, shots: {} };
@@ -2912,7 +2416,7 @@ function renderSummaryStats(filter) {
     }
   });
 
-  // Render Section 1: Match Summary & Results Box
+  // Section 1: Match Summary Box
   const isDoubles = (matchSeries.playerMode === "DOUBLES");
   const t1Name = isDoubles ? `Team 1 (${matchSeries.players.p1} & ${matchSeries.players.p2})` : `Team 1 (${matchSeries.players.p1})`;
   const t2Name = isDoubles ? `Team 2 (${matchSeries.players.p3} & ${matchSeries.players.p4})` : `Team 2 (${matchSeries.players.p3})`;
@@ -2943,7 +2447,7 @@ function renderSummaryStats(filter) {
     </div>
   `;
 
-  // Render Section 2: Team Performance Analysis
+  // Section 2: Team Performance Analysis
   const t1Players = isDoubles ? [matchSeries.players.p1, matchSeries.players.p2] : [matchSeries.players.p1];
   const t2Players = isDoubles ? [matchSeries.players.p3, matchSeries.players.p4] : [matchSeries.players.p3];
 
@@ -2981,7 +2485,7 @@ function renderSummaryStats(filter) {
     </div>
   `;
 
-  // Render Section 3: Player Box Score Table
+  // Section 3: Player Box Score
   const tbody = document.getElementById("summaryTableBody");
   tbody.innerHTML = "";
   for (const [pName, s] of Object.entries(combinedStats)) {
@@ -3011,7 +2515,7 @@ function renderSummaryStats(filter) {
     tbody.appendChild(tr);
   }
 
-  // Render Section 4: Point-by-Point Rally Log Table
+  // Section 4: Point-by-Point Rally Log Table
   const rTbody = document.getElementById("summaryRallyTableBody");
   rTbody.innerHTML = "";
   document.getElementById("summaryRallyCountBadge").innerText = `${ralliesToDisplay.length} Rallies Logged`;
